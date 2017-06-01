@@ -1,29 +1,20 @@
 use syn;
 use quote;
-use proc_macro::TokenStream;
 
-#[proc_macro_derive(Getters)]
-pub fn getters(input: TokenStream) -> TokenStream {
-    // Construct a string representation of the type definition
-    let s = input.to_string();
-    
-    // Parse the string representation
-    let ast = syn::parse_macro_input(&s).unwrap();
-
-    // Build the impl
-    let gen = impl_hello_world(&ast);
-    
-    // Return the generated impl
-    gen.parse().unwrap()
-}
-
-fn impl_hello_world(ast: &syn::MacroInput) -> quote::Tokens {
+pub(crate) fn implement(ast: &syn::MacroInput) -> quote::Tokens {
     let name = &ast.ident;
-    quote! {
-        impl HelloWorld for #name {
-            fn hello_world() {
-                println!("Hello, World! My name is {}", stringify!(#name));
+
+    // Is it a struct?
+    if let syn::Body::Struct(_) = ast.body {
+        quote! {
+            impl HelloWorld for #name {
+                fn hello_world() {
+                    println!("Hello, World! My name is {}", stringify!(#name));
+                }
             }
         }
+    } else {
+        // Nope. This is an Enum. We cannot handle these!
+       panic!("#[derive(Getters)] is only defined for structs, not for enums!");
     }
 }
