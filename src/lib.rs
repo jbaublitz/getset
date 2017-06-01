@@ -2,6 +2,7 @@ extern crate proc_macro;
 extern crate syn;
 #[macro_use]
 extern crate quote;
+extern crate synstructure;
 
 use proc_macro::TokenStream;
 
@@ -14,7 +15,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     
     // Parse the string representation
-    let ast = syn::parse_macro_input(&s).unwrap();
+    let ast = syn::parse_derive_input(&s).expect("Couldn't parse for getters");
 
     // Build the impl
     let gen = getters::implement(&ast);
@@ -29,7 +30,7 @@ pub fn setters(input: TokenStream) -> TokenStream {
     let s = input.to_string();
     
     // Parse the string representation
-    let ast = syn::parse_macro_input(&s).unwrap();
+    let ast = syn::parse_derive_input(&s).expect("Couldn't parse for setters");
 
     // Build the impl
     let gen = setters::implement(&ast);

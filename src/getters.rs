@@ -1,16 +1,24 @@
 use syn;
 use quote;
+use synstructure::{each_field, BindStyle};
 
-pub(crate) fn implement(ast: &syn::MacroInput) -> quote::Tokens {
+pub(crate) fn implement(ast: &syn::DeriveInput) -> quote::Tokens {
     let name = &ast.ident;
 
     // Is it a struct?
-    if let syn::Body::Struct(_) = ast.body {
+    if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
+
+        let match_body = each_field(&ast, &BindStyle::Ref.into(), |binding_info| {
+            let attrs = &binding_info.field.attrs;
+            println!("{:#?}", attrs);
+            quote! {
+                ()
+            }
+        });
+
         quote! {
-            impl HelloWorld for #name {
-                fn hello_world() {
-                    println!("Hello, World! My name is {}", stringify!(#name));
-                }
+            impl #name {
+                
             }
         }
     } else {
