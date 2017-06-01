@@ -10,9 +10,9 @@ pub(crate) fn implement(ast: &syn::DeriveInput) -> quote::Tokens {
 
         let match_body = each_field(&ast, &BindStyle::Ref.into(), |binding_info| {
             let attrs = &binding_info.field.attrs;
-            println!("{:#?}", attrs);
+
             quote! {
-                ()
+                
             }
         });
 

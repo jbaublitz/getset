@@ -20,6 +20,8 @@ pub fn getters(input: TokenStream) -> TokenStream {
     // Build the impl
     let gen = getters::implement(&ast);
     
+    println!("{}", gen.as_str());
+
     // Return the generated impl
     gen.parse().unwrap()
 }
