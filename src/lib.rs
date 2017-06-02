@@ -1,3 +1,87 @@
+/*!
+Getset, we're ready to go!
+
+A procedural macro for generating the most basic getters and setters on fields.
+
+Getters are generated as `fn field(&self) -> &type`, while setters are generated as `fn field(&mut self, val: type)`.
+
+These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
+
+```rust,no_run
+#[macro_use]
+extern crate getset;
+
+use submodule::other::Foo;
+
+// For testing `pub(super)`
+mod submodule {
+    use self::other::Foo;
+    // For testing `pub(in super::other)`
+    pub mod other {
+        #[derive(Getters, Setters, Default)]
+        pub struct Foo<T> where T: Copy + Clone + Default {
+            #[get]
+            private_get: T,
+
+            #[set]
+            private_set: T,
+
+            #[get = "pub"]
+            public_accessible_get: T,
+            
+            #[set = "pub"]
+            public_accessible_set: T,
+
+            #[get = "pub(crate)"]
+            crate_accessible_get: T,
+
+            #[set = "pub(crate)"]
+            crate_accessible_set: T,
+
+            #[get = "pub(super)"]
+            super_accessible_get: T,
+
+            #[set = "pub(super)"]
+            super_accessible_set: T,
+
+            #[get = "pub(in super::other)"]
+            scope_accessible_get: T,
+
+            #[set = "pub(in super::other)"]
+            scope_accessible_set: T,
+            
+            #[get]
+            #[set]
+            private_accessible_get_set: T,
+            
+            #[get = "pub"]
+            #[set = "pub"]
+            public_accessible_get_set: T,
+            
+            #[get = "pub(crate)"]
+            #[set = "pub(crate)"]
+            crate_accessible_get_set: T,
+
+            #[get = "pub(super)"]
+            #[set = "pub(super)"]
+            super_accessible_get_set: T,
+            
+            #[get = "pub(in super::other)"]
+            #[set = "pub(in super::other)"]
+            scope_accessible_get_set: T,
+        }
+    }
+}
+
+fn main() {
+    let mut foo = Foo::default();
+    foo.public_accessible_get();
+    foo.set_public_accessible_set(1);
+}
+```
+*/
+
+
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]

@@ -1,5 +1,5 @@
 #[macro_use]
-extern crate etters;
+extern crate getset;
 
 use submodule::other::Foo;
 

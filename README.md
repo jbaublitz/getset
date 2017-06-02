@@ -1,4 +1,6 @@
-# (g|s)etters
+# getset
+
+Getset, we're ready to go!
 
 A procedural macro for generating the most basic getters and setters on fields.
 
