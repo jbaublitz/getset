@@ -43,6 +43,7 @@ pub fn setters(input: TokenStream) -> TokenStream {
 pub(crate) fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
     let name = &ast.ident;
     let generics = &ast.generics;
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
     if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
@@ -50,7 +51,7 @@ pub(crate) fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens
         let generated = fields.iter().map(worker).collect::<Vec<_>>();
 
         quote! {
-            impl #generics #name #generics {
+            impl #impl_generics #name #ty_generics #where_clause {
                 #(#generated)*
             }
         }

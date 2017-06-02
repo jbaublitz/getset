@@ -9,7 +9,7 @@ mod submodule {
     // For testing `pub(in super::other)`
     pub mod other {
         #[derive(Getters, Setters, Default)]
-        pub struct Foo<T: Copy + Clone + Default> {
+        pub struct Foo<T> where T: Copy + Clone + Default {
             #[get]
             private_get: T,
 
