@@ -1,28 +1,42 @@
-use syn;
-use quote;
-use synstructure::{each_field, BindStyle};
+use syn::{MetaItem, Lit, Field};
+use quote::{Ident, Tokens};
 
-pub(crate) fn implement(ast: &syn::DeriveInput) -> quote::Tokens {
-    let name = &ast.ident;
+const ATTRIBUTE_NAME: &'static str = "set";
 
-    // Is it a struct?
-    if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
-
-        let match_body = each_field(&ast, &BindStyle::Ref.into(), |binding_info| {
-            let attrs = &binding_info.field.attrs;
-
-            quote! {
+pub(crate) fn implement(field: &Field) -> Tokens {
+    let field_name = field.clone().ident.expect("Expected the field to have a name");
                 
-            }
-        });
+    let attr = field.attrs.iter()
+        .filter(|v| v.name() == ATTRIBUTE_NAME)
+        .last();
 
-        quote! {
-            impl #name {
-                
+    match attr {
+        Some(attr) => {
+            match attr.value {
+                MetaItem::Word(_) => {
+                    let fn_name = Ident::from(format!("set_{}", field_name));
+                    let ty = field.ty.clone();
+                    quote! {
+                        fn #fn_name(&mut self, val: #ty) {
+                            self.#field_name = val;
+                        }
+                    }
+                },
+                MetaItem::NameValue(_, Lit::Str(ref s, _)) => {
+                    let fn_name = Ident::from(format!("set_{}", field_name));
+                    let visibility = Ident::from(s.clone());
+                    let ty = field.ty.clone();
+                    quote! {
+                        #visibility fn #fn_name(&mut self, val: #ty) {
+                            self.#field_name = val;
+                        }
+                    }
+                },
+                // Don't need to do anything.
+                _ => quote! { }
             }
-        }
-    } else {
-        // Nope. This is an Enum. We cannot handle these!
-       panic!("#[derive(Setters)] is only defined for structs, not for enums!");
+        },
+        // Don't need to do anything.
+        None => quote! { }
     }
 }
