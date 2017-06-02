@@ -1,5 +1,8 @@
 # getset
 
+[![Build Status](https://travis-ci.org/Hoverbear/getset.svg?branch=master)](https://travis-ci.org/Hoverbear/getset)
+[![Build status](https://ci.appveyor.com/api/projects/status/w8v2poyjwsy5d05k?svg=true)](https://ci.appveyor.com/project/Hoverbear/getset)
+
 Getset, we're ready to go!
 
 A procedural macro for generating the most basic getters and setters on fields.
