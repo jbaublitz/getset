@@ -12,7 +12,7 @@ license = "MIT"
 categories = ["development-tools::procedural-macro-helpers"]
 keywords = ["macro", "getter", "setter", "getters", "setters"]
 readme = "README.md"
-repository = "..."
+repository = "https://github.com/Hoverbear/getset"
 
 [badges]
 travis-ci = { repository = "https://github.com/Hoverbear/getset" }
