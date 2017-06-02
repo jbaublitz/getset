@@ -2,6 +2,10 @@
 
 A procedural macro for generating the most basic getters and setters on fields.
 
+Getters are generated as `fn field(&self) -> &type`, while setters are generated as `fn field(&mut self, val: type)`.
+
+These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
+
 ```rust
 #[macro_use]
 extern crate etters;
