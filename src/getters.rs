@@ -17,8 +17,8 @@ pub(crate) fn implement(field: &Field) -> Tokens {
                     let fn_name = Ident::from(format!("{}", field_name));
                     let ty = field.ty.clone();
                     quote! {
-                        fn #fn_name(&self) -> #ty {
-                            self.#field_name
+                        fn #fn_name(&self) -> &#ty {
+                            &self.#field_name
                         }
                     }
                 },
@@ -27,8 +27,8 @@ pub(crate) fn implement(field: &Field) -> Tokens {
                     let visibility = Ident::from(s.clone());
                     let ty = field.ty.clone();
                     quote! {
-                        #visibility fn #fn_name(&self) -> #ty {
-                            self.#field_name
+                        #visibility fn #fn_name(&self) -> &#ty {
+                            &self.#field_name
                         }
                     }
                 },
