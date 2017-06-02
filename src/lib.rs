@@ -19,6 +19,7 @@ pub struct Foo<T> where T: Copy + Clone + Default {
     private_get: T,
 
     /// Doc comments are supported!
+    /// Multiline, even.
     #[set]
     private_set: T,
 
