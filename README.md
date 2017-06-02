@@ -17,79 +17,23 @@ These macros are not intended to be used on fields which require custom logic in
 #[macro_use]
 extern crate getset;
 
-#[derive(Getters, Setters, Default)]
+#[derive(Getters, Setters, MutGetters, Default)]
 pub struct Foo<T> where T: Copy + Clone + Default {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get]
-    private_get: T,
+    #[get] #[set] #[get_mut]
+    private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[set]
-    private_set: T,
-
-    /// Doc comments are supported!
-    #[get = "pub"]
-    public_accessible_get: T,
-    
-    /// Doc comments are supported!
-    #[set = "pub"]
-    public_accessible_set: T,
-
-    // /// Doc comments are supported!
-    // #[get = "pub(crate)"]
-    // crate_accessible_get: T,
-
-    // /// Doc comments are supported!
-    // #[set = "pub(crate)"]
-    // crate_accessible_set: T,
-
-    // /// Doc comments are supported!
-    // #[get = "pub(super)"]
-    // super_accessible_get: T,
-
-    // /// Doc comments are supported!
-    // #[set = "pub(super)"]
-    // super_accessible_set: T,
-
-    // /// Doc comments are supported!
-    // #[get = "pub(in some::other::path)"]
-    // scope_accessible_get: T,
-
-    // /// Doc comments are supported!
-    // #[set = "pub(in some::other::path)"]
-    // scope_accessible_set: T,
-    
-    /// Doc comments are supported!
-    #[get]
-    #[set]
-    private_accessible_get_set: T,
-    
-    /// Doc comments are supported!
-    #[get = "pub"]
-    #[set = "pub"]
-    public_accessible_get_set: T,
-    
-    // /// Doc comments are supported!
-    // #[get = "pub(crate)"]
-    // #[set = "pub(crate)"]
-    // crate_accessible_get_set: T,
-
-    // /// Doc comments are supported!
-    // #[get = "pub(super)"]
-    // #[set = "pub(super)"]
-    // super_accessible_get_set: T,
-    
-    // /// Doc comments are supported!
-    // #[get = "pub(in some::other::path)"]
-    // #[set = "pub(in some::other::path)"]
-    // scope_accessible_get_set: T,
+    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
+    public: T,
 }
 
 fn main() {
     let mut foo = Foo::default();
-    foo.private_get();
-    foo.set_private_set(1);
+    foo.set_private(1);
+    (*foo.private_mut()) += 1;
+    assert_eq!(*foo.private(), 2);
 }
 ```

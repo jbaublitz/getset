@@ -3,10 +3,11 @@ use quote::{Ident, Tokens};
 
 const ATTRIBUTE_NAME: &'static str = "get";
 const FN_NAME_PREFIX: &'static str = "";
+const FN_NAME_SUFFIX: &'static str = "";
 
 pub fn implement(field: &Field) -> Tokens {
     let field_name = field.clone().ident.expect("Expected the field to have a name");
-    let fn_name = Ident::from(format!("{}{}", FN_NAME_PREFIX, field_name));
+    let fn_name = Ident::from(format!("{}{}{}", FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX));
     let ty = field.ty.clone();
                 
     let attr = field.attrs.iter()
