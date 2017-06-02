@@ -5,7 +5,7 @@ Getset, we're ready to go!
 
 A procedural macro for generating the most basic getters and setters on fields.
 """
-version = "0.0.1"
+version = "0.0.2"
 authors = ["hoverbear <andrew@hoverbear.org>"]
 license = "MIT"
 
