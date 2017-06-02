@@ -62,4 +62,10 @@ pub struct Foo<T> where T: Copy + Clone + Default {
     #[set = "pub(in some::other::path)"]
     scope_accessible_get_set: T,
 }
+
+fn main() {
+    let mut foo = Foo::default();
+    foo.private_get();
+    foo.set_private_set(1);
+}
 ```
