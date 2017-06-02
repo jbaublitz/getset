@@ -9,8 +9,6 @@ pub fn implement(field: &Field) -> Tokens {
     let fn_name = Ident::from(format!("{}{}", FN_NAME_PREFIX, field_name));
     let ty = field.ty.clone();
     
-    println!("{:?}", field.attrs);
-
     let attr = field.attrs.iter()
         .filter(|v| v.name() == ATTRIBUTE_NAME)
         .last();
