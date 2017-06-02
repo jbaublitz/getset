@@ -14,6 +14,7 @@ extern crate getset;
 #[derive(Getters, Setters, Default)]
 pub struct Foo<T> where T: Copy + Clone + Default {
     /// Doc comments are supported!
+    /// Multiline, even.
     #[get]
     private_get: T,
 

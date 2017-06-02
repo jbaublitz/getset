@@ -11,6 +11,7 @@ mod submodule {
         #[derive(Getters, Setters, Default)]
         pub struct Foo<T: Copy + Clone + Default> {
             /// A doc comment.
+            /// Multiple lines, even.
             #[get]
             private_get: T,
 

@@ -15,7 +15,7 @@ pub fn implement(field: &Field) -> Tokens {
     
     let doc = field.attrs.iter()
         .filter(|v| v.name() == "doc")
-        .last();
+        .collect::<Vec<_>>();
 
     match attr {
         Some(attr) => {
@@ -23,7 +23,7 @@ pub fn implement(field: &Field) -> Tokens {
                 // `#[get]`
                 MetaItem::Word(_) => {
                     quote! {
-                        #doc
+                        #(#doc)*
                         fn #fn_name(&self) -> &#ty {
                             &self.#field_name
                         }
@@ -33,7 +33,7 @@ pub fn implement(field: &Field) -> Tokens {
                 MetaItem::NameValue(_, Lit::Str(ref s, _)) => {
                     let visibility = Ident::from(s.clone());
                     quote! {
-                        #doc
+                        #(#doc)*
                         #visibility fn #fn_name(&self) -> &#ty {
                             &self.#field_name
                         }

@@ -8,6 +8,8 @@ pub fn implement(field: &Field) -> Tokens {
     let field_name = field.clone().ident.expect("Expected the field to have a name");
     let fn_name = Ident::from(format!("{}{}", FN_NAME_PREFIX, field_name));
     let ty = field.ty.clone();
+    
+    println!("{:?}", field.attrs);
 
     let attr = field.attrs.iter()
         .filter(|v| v.name() == ATTRIBUTE_NAME)
@@ -15,7 +17,7 @@ pub fn implement(field: &Field) -> Tokens {
 
     let doc = field.attrs.iter()
         .filter(|v| v.name() == "doc")
-        .last();
+        .collect::<Vec<_>>();
 
     match attr {
         Some(attr) => {
@@ -23,7 +25,7 @@ pub fn implement(field: &Field) -> Tokens {
                 // `#[set]`
                 MetaItem::Word(_) => {
                     quote! {
-                        #doc
+                        #(#doc)*
                         fn #fn_name(&mut self, val: #ty) {
                             self.#field_name = val;
                         }
@@ -33,7 +35,7 @@ pub fn implement(field: &Field) -> Tokens {
                 MetaItem::NameValue(_, Lit::Str(ref s, _)) => {
                     let visibility = Ident::from(s.clone());
                     quote! {
-                        #doc
+                        #(#doc)*
                         #visibility fn #fn_name(&mut self, val: #ty) {
                             self.#field_name = val;
                         }

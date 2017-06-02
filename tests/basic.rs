@@ -11,10 +11,12 @@ mod submodule {
         #[derive(Getters, Setters, Default)]
         pub struct Foo {
             /// A doc comment.
+            /// Multiple lines, even.
             #[get]
             private_get: usize,
 
             /// A doc comment.
+            /// Multiple lines, even.
             #[set]
             private_set: usize,
 
