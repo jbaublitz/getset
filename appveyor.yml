@@ -19,7 +19,5 @@ cache:
   - C:\Users\appveyor\.cargo\registry
   - target
 
-# TODO This is the "test phase", tweak it as you see fit
 test_script:
-  # we don't run the "test phase" when doing deploys
   - cargo test
