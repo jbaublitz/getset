@@ -8,4 +8,4 @@ cache: cargo
 matrix:
   include:
     - rust: nightly
-    - rust: stable
+    # - rust: stable
