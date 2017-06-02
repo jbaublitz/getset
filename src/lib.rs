@@ -7,76 +7,82 @@ Getters are generated as `fn field(&self) -> &type`, while setters are generated
 
 These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
 
-```rust,no_run
+```rust
 #[macro_use]
 extern crate getset;
 
-use submodule::other::Foo;
+#[derive(Getters, Setters, Default)]
+pub struct Foo<T> where T: Copy + Clone + Default {
+    /// Doc comments are supported!
+    #[get]
+    private_get: T,
 
-// For testing `pub(super)`
-mod submodule {
-    use self::other::Foo;
-    // For testing `pub(in super::other)`
-    pub mod other {
-        #[derive(Getters, Setters, Default)]
-        pub struct Foo<T> where T: Copy + Clone + Default {
-            #[get]
-            private_get: T,
+    /// Doc comments are supported!
+    #[set]
+    private_set: T,
 
-            #[set]
-            private_set: T,
+    /// Doc comments are supported!
+    #[get = "pub"]
+    public_accessible_get: T,
+    
+    /// Doc comments are supported!
+    #[set = "pub"]
+    public_accessible_set: T,
 
-            #[get = "pub"]
-            public_accessible_get: T,
-            
-            #[set = "pub"]
-            public_accessible_set: T,
+    // /// Doc comments are supported!
+    // #[get = "pub(crate)"]
+    // crate_accessible_get: T,
 
-            #[get = "pub(crate)"]
-            crate_accessible_get: T,
+    // /// Doc comments are supported!
+    // #[set = "pub(crate)"]
+    // crate_accessible_set: T,
 
-            #[set = "pub(crate)"]
-            crate_accessible_set: T,
+    // /// Doc comments are supported!
+    // #[get = "pub(super)"]
+    // super_accessible_get: T,
 
-            #[get = "pub(super)"]
-            super_accessible_get: T,
+    // /// Doc comments are supported!
+    // #[set = "pub(super)"]
+    // super_accessible_set: T,
 
-            #[set = "pub(super)"]
-            super_accessible_set: T,
+    // /// Doc comments are supported!
+    // #[get = "pub(in some::other::path)"]
+    // scope_accessible_get: T,
 
-            #[get = "pub(in super::other)"]
-            scope_accessible_get: T,
+    // /// Doc comments are supported!
+    // #[set = "pub(in some::other::path)"]
+    // scope_accessible_set: T,
+    
+    /// Doc comments are supported!
+    #[get]
+    #[set]
+    private_accessible_get_set: T,
+    
+    /// Doc comments are supported!
+    #[get = "pub"]
+    #[set = "pub"]
+    public_accessible_get_set: T,
+    
+    // /// Doc comments are supported!
+    // #[get = "pub(crate)"]
+    // #[set = "pub(crate)"]
+    // crate_accessible_get_set: T,
 
-            #[set = "pub(in super::other)"]
-            scope_accessible_set: T,
-            
-            #[get]
-            #[set]
-            private_accessible_get_set: T,
-            
-            #[get = "pub"]
-            #[set = "pub"]
-            public_accessible_get_set: T,
-            
-            #[get = "pub(crate)"]
-            #[set = "pub(crate)"]
-            crate_accessible_get_set: T,
-
-            #[get = "pub(super)"]
-            #[set = "pub(super)"]
-            super_accessible_get_set: T,
-            
-            #[get = "pub(in super::other)"]
-            #[set = "pub(in super::other)"]
-            scope_accessible_get_set: T,
-        }
-    }
+    // /// Doc comments are supported!
+    // #[get = "pub(super)"]
+    // #[set = "pub(super)"]
+    // super_accessible_get_set: T,
+    
+    // /// Doc comments are supported!
+    // #[get = "pub(in some::other::path)"]
+    // #[set = "pub(in some::other::path)"]
+    // scope_accessible_get_set: T,
 }
 
 fn main() {
     let mut foo = Foo::default();
-    foo.public_accessible_get();
-    foo.set_public_accessible_set(1);
+    foo.private_get();
+    foo.set_private_set(1);
 }
 ```
 */
@@ -124,7 +130,7 @@ pub fn setters(input: TokenStream) -> TokenStream {
     gen.parse().unwrap()
 }
 
-pub(crate) fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
+fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
