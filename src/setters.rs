@@ -9,7 +9,6 @@ pub fn implement(field: &Field) -> Tokens {
     let field_name = field.clone().ident.expect("Expected the field to have a name");
     let fn_name = Ident::from(format!("{}{}{}", FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX));
     let ty = field.ty.clone();
-    
     let attr = field.attrs.iter()
         .filter(|v| v.name() == ATTRIBUTE_NAME)
         .last();
@@ -25,6 +24,7 @@ pub fn implement(field: &Field) -> Tokens {
                 MetaItem::Word(_) => {
                     quote! {
                         #(#doc)*
+                        #[inline(always)]
                         fn #fn_name(&mut self, val: #ty) {
                             self.#field_name = val;
                         }
@@ -35,6 +35,7 @@ pub fn implement(field: &Field) -> Tokens {
                     let visibility = Ident::from(s.clone());
                     quote! {
                         #(#doc)*
+                        #[inline(always)]
                         #visibility fn #fn_name(&mut self, val: #ty) {
                             self.#field_name = val;
                         }

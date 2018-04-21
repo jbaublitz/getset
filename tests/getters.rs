@@ -13,7 +13,7 @@ mod submodule {
             /// Multiple lines, even.
             #[get]
             private_accessible: usize,
-            
+
             /// A doc comment.
             #[get = "pub"]
             public_accessible: usize,
@@ -37,7 +37,7 @@ mod submodule {
             /// Multiple lines, even.
             #[get]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[get = "pub"]
             public_accessible: T,
@@ -61,7 +61,7 @@ mod submodule {
             /// Multiple lines, even.
             #[get]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[get = "pub"]
             public_accessible: T,
