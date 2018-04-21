@@ -25,8 +25,9 @@ pub fn implement(field: &Field) -> Tokens {
                     quote! {
                         #(#doc)*
                         #[inline(always)]
-                        fn #fn_name(&mut self, val: #ty) {
+                        fn #fn_name(&mut self, val: #ty) -> &mut Self {
                             self.#field_name = val;
+                            self
                         }
                     }
                 },
@@ -36,8 +37,9 @@ pub fn implement(field: &Field) -> Tokens {
                     quote! {
                         #(#doc)*
                         #[inline(always)]
-                        #visibility fn #fn_name(&mut self, val: #ty) {
+                        #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
                             self.#field_name = val;
+                            self
                         }
                     }
                 },
