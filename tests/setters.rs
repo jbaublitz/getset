@@ -13,10 +13,15 @@ mod submodule {
             /// Multiple lines, even.
             #[set]
             private_accessible: usize,
-            
+
             /// A doc comment.
             #[set = "pub"]
             public_accessible: usize,
+
+            /// This field is used for testing chaining.
+            #[set = "pub"]
+            second_public_accessible: bool,
+
 
             // /// A doc comment.
             // #[set = "pub(crate)"]
@@ -37,7 +42,7 @@ mod submodule {
             /// Multiple lines, even.
             #[set]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[set = "pub"]
             public_accessible: T,
@@ -61,7 +66,7 @@ mod submodule {
             /// Multiple lines, even.
             #[set]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[set = "pub"]
             public_accessible: T,
@@ -115,4 +120,12 @@ fn test_generic() {
 fn test_where() {
     let mut val = Where::default();
     val.set_public_accessible(1);
+}
+
+#[test]
+fn test_chaining() {
+    let mut val = Plain::default();
+    val
+        .set_public_accessible(1)
+        .set_second_public_accessible(true);
 }
