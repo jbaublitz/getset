@@ -33,25 +33,24 @@ fn main() {
 ```
 */
 
-
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{Field, DeriveInput};
 use quote::Tokens;
+use syn::{DeriveInput, Field};
 
-mod mut_getters;
 mod getters;
+mod mut_getters;
 mod setters;
 
 #[proc_macro_derive(Getters, attributes(get))]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
     let s = input.to_string();
-    
+
     // Parse the string representation
     let ast = syn::parse_derive_input(&s).expect("Couldn't parse for getters");
 
@@ -66,7 +65,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
     let s = input.to_string();
-    
+
     // Parse the string representation
     let ast = syn::parse_derive_input(&s).expect("Couldn't parse for getters");
 
@@ -81,13 +80,13 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 pub fn setters(input: TokenStream) -> TokenStream {
     // Construct a string representation of the type definition
     let s = input.to_string();
-    
+
     // Parse the string representation
     let ast = syn::parse_derive_input(&s).expect("Couldn't parse for setters");
 
     // Build the impl
     let gen = produce(&ast, setters::implement);
-    
+
     // Return the generated impl
     gen.parse().unwrap()
 }
@@ -99,7 +98,6 @@ fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
 
     // Is it a struct?
     if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
-
         let generated = fields.iter().map(worker).collect::<Vec<_>>();
 
         quote! {

@@ -1,19 +1,29 @@
-use syn::{MetaItem, Lit, Field};
 use quote::{Ident, Tokens};
+use syn::{Field, Lit, MetaItem};
 
 const ATTRIBUTE_NAME: &'static str = "set";
 const FN_NAME_PREFIX: &'static str = "set_";
 const FN_NAME_SUFFIX: &'static str = "";
 
 pub fn implement(field: &Field) -> Tokens {
-    let field_name = field.clone().ident.expect("Expected the field to have a name");
-    let fn_name = Ident::from(format!("{}{}{}", FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX));
+    let field_name = field
+        .clone()
+        .ident
+        .expect("Expected the field to have a name");
+    let fn_name = Ident::from(format!(
+        "{}{}{}",
+        FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX
+    ));
     let ty = field.ty.clone();
-    let attr = field.attrs.iter()
+    let attr = field
+        .attrs
+        .iter()
         .filter(|v| v.name() == ATTRIBUTE_NAME)
         .last();
 
-    let doc = field.attrs.iter()
+    let doc = field
+        .attrs
+        .iter()
         .filter(|v| v.name() == "doc")
         .collect::<Vec<_>>();
 
@@ -30,7 +40,7 @@ pub fn implement(field: &Field) -> Tokens {
                             self
                         }
                     }
-                },
+                }
                 // `#[set = "pub"]`
                 MetaItem::NameValue(_, Lit::Str(ref s, _)) => {
                     let visibility = Ident::from(s.clone());
@@ -42,7 +52,7 @@ pub fn implement(field: &Field) -> Tokens {
                             self
                         }
                     }
-                },
+                }
                 // This currently doesn't work, but it might in the future.
                 /// ---
                 // // `#[set(pub)]`
@@ -61,8 +71,8 @@ pub fn implement(field: &Field) -> Tokens {
                 // },
                 _ => panic!("Unexpected attribute parameters."),
             }
-        },
+        }
         // Don't need to do anything.
-        None => quote! { }
+        None => quote!{},
     }
 }
