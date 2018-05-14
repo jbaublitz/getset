@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate getset;
 
-use submodule::other::{Plain, Generic, Where};
+use submodule::other::{Generic, Plain, Where};
 
 // For testing `pub(super)`
 mod submodule {
@@ -21,8 +21,6 @@ mod submodule {
             /// This field is used for testing chaining.
             #[set = "pub"]
             second_public_accessible: bool,
-
-
             // /// A doc comment.
             // #[set = "pub(crate)"]
             // crate_accessible: usize,
@@ -46,7 +44,6 @@ mod submodule {
             /// A doc comment.
             #[set = "pub"]
             public_accessible: T,
-
             // /// A doc comment.
             // #[set = "pub(crate)"]
             // crate_accessible: usize,
@@ -61,7 +58,10 @@ mod submodule {
         }
 
         #[derive(Setters, Default)]
-        pub struct Where<T> where T: Copy + Clone + Default {
+        pub struct Where<T>
+        where
+            T: Copy + Clone + Default,
+        {
             /// A doc comment.
             /// Multiple lines, even.
             #[set]
@@ -70,7 +70,6 @@ mod submodule {
             /// A doc comment.
             #[set = "pub"]
             public_accessible: T,
-
             // /// A doc comment.
             // #[set = "pub(crate)"]
             // crate_accessible: usize,
@@ -125,7 +124,6 @@ fn test_where() {
 #[test]
 fn test_chaining() {
     let mut val = Plain::default();
-    val
-        .set_public_accessible(1)
+    val.set_public_accessible(1)
         .set_second_public_accessible(true);
 }

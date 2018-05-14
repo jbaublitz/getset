@@ -33,63 +33,52 @@ fn main() {
 ```
 */
 
-
 extern crate proc_macro;
 extern crate syn;
 #[macro_use]
 extern crate quote;
+extern crate proc_macro2;
 
 use proc_macro::TokenStream;
-use syn::{Field, DeriveInput};
 use quote::Tokens;
+use syn::{DataStruct, DeriveInput, Field};
 
-mod mut_getters;
 mod getters;
+mod mut_getters;
 mod setters;
 
 #[proc_macro_derive(Getters, attributes(get))]
 pub fn getters(input: TokenStream) -> TokenStream {
-    // Construct a string representation of the type definition
-    let s = input.to_string();
-    
     // Parse the string representation
-    let ast = syn::parse_derive_input(&s).expect("Couldn't parse for getters");
+    let ast = syn::parse(input).expect("Couldn't parse for getters");
 
     // Build the impl
     let gen = produce(&ast, getters::implement);
 
     // Return the generated impl
-    gen.parse().unwrap()
+    gen.into()
 }
 
 #[proc_macro_derive(MutGetters, attributes(get_mut))]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
-    // Construct a string representation of the type definition
-    let s = input.to_string();
-    
     // Parse the string representation
-    let ast = syn::parse_derive_input(&s).expect("Couldn't parse for getters");
-
+    let ast = syn::parse(input).expect("Couldn't parse for getters");
     // Build the impl
     let gen = produce(&ast, mut_getters::implement);
-
     // Return the generated impl
-    gen.parse().unwrap()
+    gen.into()
 }
 
 #[proc_macro_derive(Setters, attributes(set))]
 pub fn setters(input: TokenStream) -> TokenStream {
-    // Construct a string representation of the type definition
-    let s = input.to_string();
-    
     // Parse the string representation
-    let ast = syn::parse_derive_input(&s).expect("Couldn't parse for setters");
+    let ast = syn::parse(input).expect("Couldn't parse for setters");
 
     // Build the impl
     let gen = produce(&ast, setters::implement);
-    
+
     // Return the generated impl
-    gen.parse().unwrap()
+    gen.into()
 }
 
 fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
@@ -98,8 +87,7 @@ fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
-    if let syn::Body::Struct(syn::VariantData::Struct(ref fields)) = ast.body {
-
+    if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
         let generated = fields.iter().map(worker).collect::<Vec<_>>();
 
         quote! {
@@ -111,4 +99,8 @@ fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
         // Nope. This is an Enum. We cannot handle these!
         panic!("#[derive(Getters)] is only defined for structs, not for enums!");
     }
+}
+
+fn attr_name(attr: &syn::Attribute) -> Option<syn::Ident> {
+    attr.interpret_meta().map(|v| v.name())
 }

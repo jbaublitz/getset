@@ -1,27 +1,39 @@
-use syn::{MetaItem, Lit, Field};
-use quote::{Ident, Tokens};
+use attr_name;
+use proc_macro2::{Span, Term};
+use quote::Tokens;
+use syn::{Field, Lit, Meta, MetaNameValue};
 
 const ATTRIBUTE_NAME: &'static str = "set";
 const FN_NAME_PREFIX: &'static str = "set_";
 const FN_NAME_SUFFIX: &'static str = "";
 
 pub fn implement(field: &Field) -> Tokens {
-    let field_name = field.clone().ident.expect("Expected the field to have a name");
-    let fn_name = Ident::from(format!("{}{}{}", FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX));
+    let field_name = field
+        .clone()
+        .ident
+        .expect("Expected the field to have a name");
+    let fn_name = Term::new(
+        &format!("{}{}{}", FN_NAME_PREFIX, field_name, FN_NAME_SUFFIX),
+        Span::call_site(),
+    );
     let ty = field.ty.clone();
-    let attr = field.attrs.iter()
-        .filter(|v| v.name() == ATTRIBUTE_NAME)
+    let attr = field
+        .attrs
+        .iter()
+        .filter(|v| attr_name(v).expect("attribute name") == ATTRIBUTE_NAME)
         .last();
 
-    let doc = field.attrs.iter()
-        .filter(|v| v.name() == "doc")
+    let doc = field
+        .attrs
+        .iter()
+        .filter(|v| attr_name(v).expect("attribute name") == "doc")
         .collect::<Vec<_>>();
 
     match attr {
         Some(attr) => {
-            match attr.value {
+            match attr.interpret_meta() {
                 // `#[set]`
-                MetaItem::Word(_) => {
+                Some(Meta::Word(_)) => {
                     quote! {
                         #(#doc)*
                         #[inline(always)]
@@ -30,10 +42,13 @@ pub fn implement(field: &Field) -> Tokens {
                             self
                         }
                     }
-                },
+                }
                 // `#[set = "pub"]`
-                MetaItem::NameValue(_, Lit::Str(ref s, _)) => {
-                    let visibility = Ident::from(s.clone());
+                Some(Meta::NameValue(MetaNameValue {
+                    lit: Lit::Str(ref s),
+                    ..
+                })) => {
+                    let visibility = Term::new(&s.value(), s.span());
                     quote! {
                         #(#doc)*
                         #[inline(always)]
@@ -42,9 +57,9 @@ pub fn implement(field: &Field) -> Tokens {
                             self
                         }
                     }
-                },
+                }
                 // This currently doesn't work, but it might in the future.
-                /// ---
+                //
                 // // `#[set(pub)]`
                 // MetaItem::List(_, ref vec) => {
                 //     let s = vec.iter().last().expect("No item found in attribute list.");
@@ -61,8 +76,8 @@ pub fn implement(field: &Field) -> Tokens {
                 // },
                 _ => panic!("Unexpected attribute parameters."),
             }
-        },
+        }
         // Don't need to do anything.
-        None => quote! { }
+        None => quote!{},
     }
 }

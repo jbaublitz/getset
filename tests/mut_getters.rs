@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate getset;
 
-use submodule::other::{Plain, Generic, Where};
+use submodule::other::{Generic, Plain, Where};
 
 // For testing `pub(super)`
 mod submodule {
@@ -13,11 +13,10 @@ mod submodule {
             /// Multiple lines, even.
             #[get_mut]
             private_accessible: usize,
-            
+
             /// A doc comment.
             #[get_mut = "pub"]
             public_accessible: usize,
-
             // /// A doc comment.
             // #[get_mut = "pub(crate)"]
             // crate_accessible: usize,
@@ -37,11 +36,10 @@ mod submodule {
             /// Multiple lines, even.
             #[get_mut]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[get_mut = "pub"]
             public_accessible: T,
-
             // /// A doc comment.
             // #[get_mut = "pub(crate)"]
             // crate_accessible: usize,
@@ -56,16 +54,18 @@ mod submodule {
         }
 
         #[derive(MutGetters, Default)]
-        pub struct Where<T> where T: Copy + Clone + Default {
+        pub struct Where<T>
+        where
+            T: Copy + Clone + Default,
+        {
             /// A doc comment.
             /// Multiple lines, even.
             #[get_mut]
             private_accessible: T,
-            
+
             /// A doc comment.
             #[get_mut = "pub"]
             public_accessible: T,
-
             // /// A doc comment.
             // #[get_mut = "pub(crate)"]
             // crate_accessible: usize,
