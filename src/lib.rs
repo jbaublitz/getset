@@ -43,9 +43,8 @@ use proc_macro::TokenStream;
 use quote::Tokens;
 use syn::{DataStruct, DeriveInput, Field};
 
-mod getters;
-mod mut_getters;
-mod setters;
+mod generate;
+use generate::{GenMode, GenParams};
 
 #[proc_macro_derive(Getters, attributes(get))]
 pub fn getters(input: TokenStream) -> TokenStream {
@@ -53,7 +52,17 @@ pub fn getters(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("Couldn't parse for getters");
 
     // Build the impl
-    let gen = produce(&ast, getters::implement);
+    let gen = produce(&ast, |f| {
+        generate::implement(
+            f,
+            GenMode::Get,
+            GenParams {
+                attribute_name: "get",
+                fn_name_prefix: "",
+                fn_name_suffix: "",
+            },
+        )
+    });
 
     // Return the generated impl
     gen.into()
@@ -64,7 +73,17 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast = syn::parse(input).expect("Couldn't parse for getters");
     // Build the impl
-    let gen = produce(&ast, mut_getters::implement);
+    let gen = produce(&ast, |f| {
+        generate::implement(
+            f,
+            GenMode::GetMut,
+            GenParams {
+                attribute_name: "get_mut",
+                fn_name_prefix: "",
+                fn_name_suffix: "_mut",
+            },
+        )
+    });
     // Return the generated impl
     gen.into()
 }
@@ -75,7 +94,17 @@ pub fn setters(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("Couldn't parse for setters");
 
     // Build the impl
-    let gen = produce(&ast, setters::implement);
+    let gen = produce(&ast, |f| {
+        generate::implement(
+            f,
+            GenMode::Set,
+            GenParams {
+                attribute_name: "set",
+                fn_name_prefix: "set_",
+                fn_name_suffix: "",
+            },
+        )
+    });
 
     // Return the generated impl
     gen.into()
