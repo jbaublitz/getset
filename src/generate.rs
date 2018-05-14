@@ -1,7 +1,7 @@
-use attr_name;
 use proc_macro2::{Span, Term};
 use quote::Tokens;
-use syn::{Field, Lit, Meta, MetaNameValue};
+use std::collections::HashSet;
+use syn::{Attribute, Field, Ident, Lit, Meta, MetaNameValue, PathSegment, Type, TypePath};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -15,11 +15,52 @@ pub enum GenMode {
     GetMut,
 }
 
+fn attr_name(attr: &Attribute) -> Option<Ident> {
+    attr.interpret_meta().map(|v| v.name())
+}
+
+lazy_static! {
+    static ref PRIMITIVE_TYPENAMES: HashSet<&'static str> = {
+        let mut m = HashSet::new();
+        macro_rules! add_types {
+                ($m:ident, types: [$( $Type:ident ),*]) => {
+                    $(
+                        $m.insert(stringify!($Type));
+                        )*
+                }
+        }
+        add_types!(m, types: [i8, u8, i16, u16, i32, u32, i64, u64, usize, isize, bool, f32, f64]);
+        m
+    };
+}
+
+fn is_type_primitive(ty: &Type) -> bool {
+    if let Type::Path(TypePath {
+        qself: ref _qself,
+        path,
+    }) = ty
+    {
+        if path.segments.len() == 1 {
+            let seg: &PathSegment = path.segments.first().unwrap().value();
+            if PRIMITIVE_TYPENAMES.contains(seg.ident.as_ref()) {
+                true
+            } else {
+                false
+            }
+        } else {
+            false
+        }
+    } else {
+        false
+    }
+}
+
 pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
     let field_name = field
         .clone()
         .ident
         .expect("Expected the field to have a name");
+    let type_primitive = is_type_primitive(&field.ty);
     let fn_name = Term::new(
         &format!(
             "{}{}{}",
@@ -82,11 +123,21 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
                     let visibility = Term::new(&s.value(), s.span());
                     match mode {
                         GenMode::Get => {
-                            quote! {
-                                #(#doc)*
-                                #[inline(always)]
-                                #visibility fn #fn_name(&self) -> &#ty {
-                                    &self.#field_name
+                            if type_primitive {
+                                quote! {
+                                    #(#doc)*
+                                    #[inline(always)]
+                                    #visibility fn #fn_name(&self) -> #ty {
+                                        self.#field_name
+                                    }
+                                }
+                            } else {
+                                quote! {
+                                    #(#doc)*
+                                    #[inline(always)]
+                                    #visibility fn #fn_name(&self) -> &#ty {
+                                        &self.#field_name
+                                    }
                                 }
                             }
                         }

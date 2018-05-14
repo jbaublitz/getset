@@ -25,3 +25,4 @@ proc-macro = true
 quote = "0.5.2"
 syn = "0.13.10"
 proc-macro2 = { version = "0.3", default-features = false }
+lazy_static = "1.0.0"

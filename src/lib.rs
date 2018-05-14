@@ -38,6 +38,8 @@ extern crate syn;
 #[macro_use]
 extern crate quote;
 extern crate proc_macro2;
+#[macro_use]
+extern crate lazy_static;
 
 use proc_macro::TokenStream;
 use quote::Tokens;
@@ -128,8 +130,4 @@ fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
         // Nope. This is an Enum. We cannot handle these!
         panic!("#[derive(Getters)] is only defined for structs, not for enums!");
     }
-}
-
-fn attr_name(attr: &syn::Attribute) -> Option<syn::Ident> {
-    attr.interpret_meta().map(|v| v.name())
 }

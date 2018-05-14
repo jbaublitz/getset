@@ -102,13 +102,13 @@ mod submodule {
 #[test]
 fn test_plain() {
     let val = Plain::default();
-    val.public_accessible();
+    assert_eq!(usize::default(), val.public_accessible());
 }
 
 #[test]
 fn test_generic() {
     let val = Generic::<usize>::default();
-    val.public_accessible();
+    assert_eq!(usize::default(), *val.public_accessible());
 }
 
 #[test]
