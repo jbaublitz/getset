@@ -7,7 +7,7 @@ use submodule::other::{Generic, Plain, Where};
 mod submodule {
     // For testing `pub(in super::other)`
     pub mod other {
-        #[derive(Getters, Default)]
+        #[derive(Getters)]
         pub struct Plain {
             /// A doc comment.
             /// Multiple lines, even.
@@ -28,6 +28,15 @@ mod submodule {
             // /// A doc comment.
             // #[get = "pub(in super::other)"]
             // scope_accessible: usize,
+        }
+
+        impl Default for Plain {
+            fn default() -> Plain {
+                Plain {
+                    private_accessible: 17,
+                    public_accessible: 18,
+                }
+            }
         }
 
         #[derive(Getters, Default)]
@@ -102,17 +111,17 @@ mod submodule {
 #[test]
 fn test_plain() {
     let val = Plain::default();
-    val.public_accessible();
+    assert_eq!(18, *val.public_accessible());
 }
 
 #[test]
 fn test_generic() {
     let val = Generic::<usize>::default();
-    val.public_accessible();
+    assert_eq!(usize::default(), *val.public_accessible());
 }
 
 #[test]
 fn test_where() {
     let val = Where::<usize>::default();
-    val.public_accessible();
+    assert_eq!(usize::default(), *val.public_accessible());
 }
