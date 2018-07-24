@@ -12,6 +12,7 @@ pub enum GenMode {
     Get,
     Set,
     GetMut,
+    Replace,
 }
 
 fn attr_name(attr: &Attribute) -> Option<Ident> {
@@ -76,6 +77,15 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
                             }
                         }
                     }
+                    GenMode::Replace => {
+                        quote! {
+                            #(#doc)*
+                            fn #fn_name(&mut self, val: #ty) -> #ty {
+                                use std::mem;
+                                mem::replace(&mut self.#field_name, val)
+                            }
+                        }
+                    }
                 },
                 // `#[get = "pub"]` or `#[set = "pub"]`
                 Some(Meta::NameValue(MetaNameValue {
@@ -108,6 +118,15 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
                                 #(#doc)*
                                 #visibility fn #fn_name(&mut self) -> &mut #ty {
                                     &mut self.#field_name
+                                }
+                            }
+                        }
+                        GenMode::Replace => {
+                            quote! {
+                                #(#doc)*
+                                #visibility fn #fn_name(&mut self, val: #ty) -> #ty {
+                                    use std::mem;
+                                    mem::replace(&mut self.#field_name, val)
                                 }
                             }
                         }

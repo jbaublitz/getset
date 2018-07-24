@@ -11,16 +11,16 @@ These macros are not intended to be used on fields which require custom logic in
 #[macro_use]
 extern crate getset;
 
-#[derive(Getters, Setters, MutGetters, Default)]
+#[derive(Getters, Setters, MutGetters, Replacers, Default)]
 pub struct Foo<T> where T: Copy + Clone + Default {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get] #[set] #[get_mut]
+    #[get] #[set] #[get_mut] #[replace]
     private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
+    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"] #[replace = "pub"]
     public: T,
 }
 
@@ -29,6 +29,9 @@ fn main() {
     foo.set_private(1);
     (*foo.private_mut()) += 1;
     assert_eq!(*foo.private(), 2);
+
+    assert_eq!(foo.replace_private(3), 2);
+    assert_eq!(*foo.private(), 3);
 }
 ```
 */
@@ -101,6 +104,28 @@ pub fn setters(input: TokenStream) -> TokenStream {
             GenParams {
                 attribute_name: "set",
                 fn_name_prefix: "set_",
+                fn_name_suffix: "",
+            },
+        )
+    });
+
+    // Return the generated impl
+    gen.into()
+}
+
+#[proc_macro_derive(Replacers, attributes(replace))]
+pub fn replacers(input: TokenStream) -> TokenStream {
+    // Parse the string representation
+    let ast = syn::parse(input).expect("Couldn't parse for setters");
+
+    // Build the impl
+    let gen = produce(&ast, |f| {
+        generate::implement(
+            f,
+            GenMode::Replace,
+            GenParams {
+                attribute_name: "replace",
+                fn_name_prefix: "replace_",
                 fn_name_suffix: "",
             },
         )
