@@ -1,13 +1,15 @@
 use proc_macro2::{Span, Term};
 use quote::Tokens;
-use syn::{Attribute, Field, Ident, Lit, Meta, MetaNameValue, NestedMeta, MetaList};
+use syn::{Attribute, Field, Ident, Lit, Meta, MetaList, MetaNameValue, NestedMeta};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
     pub fn_name_prefix: &'static str,
     pub fn_name_suffix: &'static str,
+    pub global_attr: Option<Meta>,
 }
 
+#[derive(Clone)]
 pub enum GenMode {
     Get,
     Set,
@@ -61,7 +63,7 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
     }
 }
 
-pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
+pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> Tokens {
     let field_name = field
         .clone()
         .ident
@@ -85,47 +87,45 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
                 "doc" => {
                     doc.push(v);
                     None
-                },
+                }
                 name if params.attribute_name == name => Some(tuple.1),
                 _ => None,
             }
-        })
-        .last();
+        }).last()
+        .or_else(|| params.global_attr.clone());
 
     let visibility = parse_visibility(attr.as_ref(), params.attribute_name.as_ref());
     match attr {
-        Some(_) => {
-            match mode {
-                GenMode::Get => {
-                    quote! {
-                        #(#doc)*
-                        #[inline(always)]
-                        #visibility fn #fn_name(&self) -> &#ty {
-                            &self.#field_name
-                        }
-                    }
-                }
-                GenMode::Set => {
-                    quote! {
-                        #(#doc)*
-                        #[inline(always)]
-                        #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                            self.#field_name = val;
-                            self
-                        }
-                    }
-                }
-                GenMode::GetMut => {
-                    quote! {
-                        #(#doc)*
-                        #[inline(always)]
-                        #visibility fn #fn_name(&mut self) -> &mut #ty {
-                            &mut self.#field_name
-                        }
+        Some(_) => match mode {
+            GenMode::Get => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&self) -> &#ty {
+                        &self.#field_name
                     }
                 }
             }
-        }
+            GenMode::Set => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
+                        self.#field_name = val;
+                        self
+                    }
+                }
+            }
+            GenMode::GetMut => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&mut self) -> &mut #ty {
+                        &mut self.#field_name
+                    }
+                }
+            }
+        },
         // Don't need to do anything.
         None => quote!{},
     }
