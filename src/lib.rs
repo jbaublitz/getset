@@ -49,7 +49,7 @@ use generate::{GenMode, GenParams};
 #[proc_macro_derive(Getters, attributes(get))]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse2(input.into()).expect("Couldn't parse for getters");
     let params = GenParams {
         attribute_name: "get",
         fn_name_prefix: "",
@@ -67,7 +67,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(MutGetters, attributes(get_mut))]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse2(input.into()).expect("Couldn't parse for getters");
     let params = GenParams {
         attribute_name: "get_mut",
         fn_name_prefix: "",
@@ -84,7 +84,7 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(RefSetters, attributes(ref_set))]
 pub fn ref_setters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for setters");
+    let ast: DeriveInput = syn::parse2(input.into()).expect("Couldn't parse for setters");
     let params = GenParams {
         attribute_name: "ref_set",
         fn_name_prefix: "ref_set_",
@@ -102,7 +102,7 @@ pub fn ref_setters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Setters, attributes(set))]
 pub fn setters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for setters");
+    let ast: DeriveInput = syn::parse2(input.into()).expect("Couldn't parse for setters");
     let params = GenParams {
         attribute_name: "set",
         fn_name_prefix: "set_",

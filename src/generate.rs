@@ -66,8 +66,8 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
 
 pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> Tokens {
     let field_name = field
-        .clone()
         .ident
+        .as_ref()
         .expect("Expected the field to have a name");
     let fn_name = Term::new(
         &format!(
@@ -76,7 +76,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> Tokens {
         ),
         Span::call_site(),
     );
-    let ty = field.ty.clone();
+    let ty = &field.ty;
 
     let mut doc = Vec::new();
     let attr = field
