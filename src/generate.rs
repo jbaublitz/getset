@@ -6,6 +6,7 @@ pub struct GenParams {
     pub attribute_name: &'static str,
     pub fn_name_prefix: &'static str,
     pub fn_name_suffix: &'static str,
+    pub global_attr: Option<Meta>,
 }
 
 pub enum GenMode {
@@ -54,7 +55,7 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
     }
 }
 
-pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream2 {
+pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStream2 {
     let field_name = field
         .clone()
         .ident
@@ -82,7 +83,8 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                 name if params.attribute_name == name => Some(tuple.1),
                 _ => None,
             }
-        }).last();
+        }).last()
+        .or_else(|| params.global_attr.clone());
 
     let visibility = parse_visibility(attr.as_ref(), params.attribute_name.as_ref());
     match attr {
