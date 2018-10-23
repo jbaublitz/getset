@@ -13,6 +13,7 @@ pub struct GenParams {
 pub enum GenMode {
     Get,
     Set,
+    RefSet,
     GetMut,
 }
 
@@ -106,11 +107,21 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> Tokens {
                     }
                 }
             }
-            GenMode::Set => {
+            GenMode::RefSet => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
                     #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
+                        self.#field_name = val;
+                        self
+                    }
+                }
+            }
+            GenMode::Set => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(mut self, val: #ty) -> Self {
                         self.#field_name = val;
                         self
                     }

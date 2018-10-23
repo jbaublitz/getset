@@ -26,7 +26,7 @@ pub struct Foo<T> where T: Copy + Clone + Default {
 
 fn main() {
     let mut foo = Foo::default();
-    foo.set_private(1);
+    foo = foo.set_private(1);
     (*foo.private_mut()) += 1;
     assert_eq!(*foo.private(), 2);
 }
@@ -77,6 +77,24 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 
     // Build the impl
     let gen = produce(&ast, &GenMode::GetMut, &params);
+    // Return the generated impl
+    gen.into()
+}
+
+#[proc_macro_derive(RefSetters, attributes(ref_set))]
+pub fn ref_setters(input: TokenStream) -> TokenStream {
+    // Parse the string representation
+    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for setters");
+    let params = GenParams {
+        attribute_name: "ref_set",
+        fn_name_prefix: "ref_set_",
+        fn_name_suffix: "",
+        global_attr: parse_global_attr(&ast.attrs, "ref_set"),
+    };
+
+    // Build the impl
+    let gen = produce(&ast, &GenMode::RefSet, &params);
+
     // Return the generated impl
     gen.into()
 }

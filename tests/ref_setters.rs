@@ -7,132 +7,123 @@ use submodule::other::{Generic, Plain, Where};
 mod submodule {
     // For testing `pub(in super::other)`
     pub mod other {
-        #[derive(Setters, Default)]
-        #[set]
+        #[derive(RefSetters, Default)]
         pub struct Plain {
             /// A doc comment.
             /// Multiple lines, even.
+            #[ref_set]
             private_accessible: usize,
 
             /// A doc comment.
-            #[set = "pub"]
+            #[ref_set = "pub"]
             public_accessible: usize,
 
             /// This field is used for testing chaining.
-            #[set = "pub"]
+            #[ref_set = "pub"]
             second_public_accessible: bool,
             // /// A doc comment.
-            // #[set = "pub(crate)"]
+            // #[ref_set = "pub(crate)"]
             // crate_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(super)"]
+            // #[ref_set = "pub(super)"]
             // super_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(in super::other)"]
+            // #[ref_set = "pub(in super::other)"]
             // scope_accessible: usize,
         }
 
-        #[derive(Setters, Default)]
-        #[set]
+        #[derive(RefSetters, Default)]
         pub struct Generic<T: Copy + Clone + Default> {
             /// A doc comment.
             /// Multiple lines, even.
+            #[ref_set]
             private_accessible: T,
 
             /// A doc comment.
-            #[set = "pub"]
+            #[ref_set = "pub"]
             public_accessible: T,
             // /// A doc comment.
-            // #[set = "pub(crate)"]
+            // #[ref_set = "pub(crate)"]
             // crate_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(super)"]
+            // #[ref_set = "pub(super)"]
             // super_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(in super::other)"]
+            // #[ref_set = "pub(in super::other)"]
             // scope_accessible: usize,
         }
 
-        #[derive(Setters, Default)]
-        #[set]
+        #[derive(RefSetters, Default)]
         pub struct Where<T>
         where
             T: Copy + Clone + Default,
         {
             /// A doc comment.
             /// Multiple lines, even.
+            #[ref_set]
             private_accessible: T,
 
             /// A doc comment.
-            #[set = "pub"]
+            #[ref_set = "pub"]
             public_accessible: T,
             // /// A doc comment.
-            // #[set = "pub(crate)"]
+            // #[ref_set = "pub(crate)"]
             // crate_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(super)"]
+            // #[ref_set = "pub(super)"]
             // super_accessible: usize,
 
             // /// A doc comment.
-            // #[set = "pub(in super::other)"]
+            // #[ref_set = "pub(in super::other)"]
             // scope_accessible: usize,
         }
 
         #[test]
-        #[allow(unused_assignments)]
         fn test_plain() {
             let mut val = Plain::default();
-
-            val = val.set_private_accessible(1);
+            val.ref_set_private_accessible(1);
         }
 
         #[test]
-        #[allow(unused_assignments)]
         fn test_generic() {
             let mut val = Generic::default();
-
-            val = val.set_private_accessible(1);
+            val.ref_set_private_accessible(1);
         }
 
         #[test]
-        #[allow(unused_assignments)]
         fn test_where() {
             let mut val = Where::default();
-
-            val = val.set_private_accessible(1);
+            val.ref_set_private_accessible(1);
         }
     }
 }
 
 #[test]
-#[allow(unused_assignments)]
 fn test_plain() {
     let mut val = Plain::default();
-    val = val.set_public_accessible(1);
+    val.ref_set_public_accessible(1);
 }
 
 #[test]
-#[allow(unused_assignments)]
 fn test_generic() {
     let mut val = Generic::default();
-    val = val.set_public_accessible(1);
+    val.ref_set_public_accessible(1);
 }
 
 #[test]
-#[allow(unused_assignments)]
 fn test_where() {
     let mut val = Where::default();
-    val = val.set_public_accessible(1);
+    val.ref_set_public_accessible(1);
 }
 
 #[test]
-#[allow(unused_assignments)]
 fn test_chaining() {
-    let mut val = Plain::default().set_public_accessible(1);
-    val = val.set_second_public_accessible(true);
+    let mut val = Plain::default();
+    val.ref_set_public_accessible(1)
+        .ref_set_second_public_accessible(true);
 }
