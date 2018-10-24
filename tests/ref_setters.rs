@@ -85,19 +85,19 @@ mod submodule {
 
         #[test]
         fn test_plain() {
-            let mut val = Plain::default();
-            val.ref_set_private_accessible(1);
+            let mut val: Plain = Plain::default();
+            val.ref_set_private_accessible(1usize);
         }
 
         #[test]
         fn test_generic() {
-            let mut val = Generic::default();
+            let mut val: Generic<i32> = Generic::default();
             val.ref_set_private_accessible(1);
         }
 
         #[test]
         fn test_where() {
-            let mut val = Where::default();
+            let mut val: Where<i32> = Where::default();
             val.ref_set_private_accessible(1);
         }
     }
@@ -106,24 +106,24 @@ mod submodule {
 #[test]
 fn test_plain() {
     let mut val = Plain::default();
-    val.ref_set_public_accessible(1);
+    val.ref_set_public_accessible(1usize);
 }
 
 #[test]
 fn test_generic() {
-    let mut val = Generic::default();
-    val.ref_set_public_accessible(1);
+    let mut val: Generic<usize> = Generic::default();
+    val.ref_set_public_accessible(1usize);
 }
 
 #[test]
 fn test_where() {
-    let mut val = Where::default();
-    val.ref_set_public_accessible(1);
+    let mut val: Where<usize> = Where::default();
+    val.ref_set_public_accessible(1usize);
 }
 
 #[test]
 fn test_chaining() {
     let mut val = Plain::default();
-    val.ref_set_public_accessible(1)
+    val.ref_set_public_accessible(1usize)
         .ref_set_second_public_accessible(true);
 }

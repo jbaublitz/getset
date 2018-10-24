@@ -86,25 +86,19 @@ mod submodule {
         #[test]
         #[allow(unused_assignments)]
         fn test_plain() {
-            let mut val = Plain::default();
-
-            val = val.set_private_accessible(1);
+            let _ = Plain::default().set_private_accessible(1usize);
         }
 
         #[test]
         #[allow(unused_assignments)]
         fn test_generic() {
-            let mut val = Generic::default();
-
-            val = val.set_private_accessible(1);
+            let _: Generic<i32> = Generic::default().set_private_accessible(1);
         }
 
         #[test]
         #[allow(unused_assignments)]
         fn test_where() {
-            let mut val = Where::default();
-
-            val = val.set_private_accessible(1);
+            let _: Where<i32> = Where::default().set_private_accessible(1);
         }
     }
 }
@@ -113,26 +107,26 @@ mod submodule {
 #[allow(unused_assignments)]
 fn test_plain() {
     let mut val = Plain::default();
-    val = val.set_public_accessible(1);
+    val = val.set_public_accessible(1usize);
 }
 
 #[test]
 #[allow(unused_assignments)]
 fn test_generic() {
-    let mut val = Generic::default();
-    val = val.set_public_accessible(1);
+    let mut val: Generic<usize> = Generic::default();
+    val = val.set_public_accessible(1usize);
 }
 
 #[test]
 #[allow(unused_assignments)]
 fn test_where() {
-    let mut val = Where::default();
-    val = val.set_public_accessible(1);
+    let mut val: Where<usize> = Where::default();
+    val = val.set_public_accessible(1usize);
 }
 
 #[test]
 #[allow(unused_assignments)]
 fn test_chaining() {
-    let mut val = Plain::default().set_public_accessible(1);
+    let mut val = Plain::default().set_public_accessible(1usize);
     val = val.set_second_public_accessible(true);
 }

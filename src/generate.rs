@@ -110,8 +110,8 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                        self.#field_name = val;
+                    #visibility fn #fn_name(&mut self, val: impl Into<#ty>) -> &mut Self {
+                        self.#field_name = val.into();
                         self
                     }
                 }
@@ -120,8 +120,8 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(mut self, val: #ty) -> Self {
-                        self.#field_name = val;
+                    #visibility fn #fn_name(mut self, val: impl Into<#ty>) -> Self {
+                        self.#field_name = val.into();
                         self
                     }
                 }

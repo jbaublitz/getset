@@ -25,7 +25,7 @@ pub struct Foo<T> where T: Copy + Clone + Default {
 }
 
 fn main() {
-    let mut foo = Foo::default();
+    let mut foo: Foo<i32> = Foo::default();
     foo = foo.set_private(1);
     (*foo.private_mut()) += 1;
     assert_eq!(*foo.private(), 2);
