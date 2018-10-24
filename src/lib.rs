@@ -11,24 +11,25 @@ These macros are not intended to be used on fields which require custom logic in
 #[macro_use]
 extern crate getset;
 
-#[derive(Getters, Setters, MutGetters, Default)]
+#[derive(Getters, Setters, RefSetters, MutGetters, Default)]
+#[get] #[set] #[ref_set] #[get_mut]
 pub struct Foo<T> where T: Copy + Clone + Default {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get] #[set] #[get_mut]
     private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
+    #[get = "pub"] #[set = "pub"] #[ref_set = "pub"] #[get_mut = "pub"]
     public: T,
 }
 
 fn main() {
-    let mut foo: Foo<i32> = Foo::default();
-    foo = foo.set_private(1);
+    let mut foo: Foo<i32> = Foo::default().set_private(1);
+    let private = *foo.private() + 1;
+    foo.ref_set_private(private);
     (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
+    assert_eq!(*foo.private(), 3);
 }
 ```
 */
