@@ -31,6 +31,23 @@ fn main() {
     assert_eq!(*foo.private(), 2);
 }
 ```
+```compile_fail
+#[macro_use]
+extern crate getset;
+mod submodule {
+    #[derive(Getters, Default)]
+    #[get = "pub"]
+    pub struct Foo {
+        #[get]
+        private: i32,
+        public: i32,
+    }
+}
+fn main() {
+    let mut foo = submodule::Foo::default();
+    assert_eq!(*foo.private(), 2);
+}
+```
 */
 
 extern crate proc_macro;
