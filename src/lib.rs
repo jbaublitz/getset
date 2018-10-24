@@ -40,7 +40,6 @@ extern crate quote;
 extern crate proc_macro2;
 
 use proc_macro::TokenStream;
-use quote::Tokens;
 use syn::{DataStruct, DeriveInput, Meta};
 
 mod generate;
@@ -130,7 +129,7 @@ fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<M
         }).last()
 }
 
-fn produce(ast: &DeriveInput, mode: &GenMode, params: &GenParams) -> Tokens {
+fn produce(ast: &DeriveInput, mode: &GenMode, params: &GenParams) -> proc_macro2::TokenStream {
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();

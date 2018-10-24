@@ -1,5 +1,4 @@
-use proc_macro2::{Span, Term};
-use quote::Tokens;
+use proc_macro2::{Span, TokenStream};
 use syn::{Attribute, Field, Ident, Lit, Meta, MetaList, MetaNameValue, NestedMeta};
 
 pub struct GenParams {
@@ -64,12 +63,12 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
     }
 }
 
-pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> Tokens {
+pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStream {
     let field_name = field
         .ident
         .as_ref()
         .expect("Expected the field to have a name");
-    let fn_name = Term::new(
+    let fn_name = Ident::new(
         &format!(
             "{}{}{}",
             params.fn_name_prefix, field_name, params.fn_name_suffix

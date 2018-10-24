@@ -22,6 +22,6 @@ appveyor = { repository = "https://github.com/Hoverbear/getset", service = "gith
 proc-macro = true
 
 [dependencies]
-quote = "0.5.2"
-syn = "0.13.10"
-proc-macro2 = { version = "0.3", default-features = false }
+quote = "0.6"
+syn = "0.15"
+proc-macro2 = { version = "0.4", default-features = false }
