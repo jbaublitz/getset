@@ -12,7 +12,6 @@ These macros are not intended to be used on fields which require custom logic in
 extern crate getset;
 
 #[derive(Getters, Setters, MutGetters, Default)]
-#[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
 pub struct Foo<T> where T: Copy + Clone + Default {
     /// Doc comments are supported!
     /// Multiline, even.
@@ -21,6 +20,7 @@ pub struct Foo<T> where T: Copy + Clone + Default {
 
     /// Doc comments are supported!
     /// Multiline, even.
+    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
     public: T,
 }
 
@@ -31,6 +31,8 @@ fn main() {
     assert_eq!(*foo.private(), 2);
 }
 ```
+
+Attributes can be set on struct level for all fields in struct, but field level attributes take precedence, so this can't compile.
 ```compile_fail
 #[macro_use]
 extern crate getset;
