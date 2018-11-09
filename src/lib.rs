@@ -47,7 +47,8 @@ mod submodule {
 }
 fn main() {
     let mut foo = submodule::Foo::default();
-    assert_eq!(*foo.private(), 2);
+    // can't compile, because field getter is private
+    foo.private();
 }
 ```
 */
