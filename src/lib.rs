@@ -40,7 +40,7 @@ extern crate quote;
 extern crate proc_macro2;
 
 use proc_macro::TokenStream;
-use quote::Tokens;
+use proc_macro2::TokenStream as TokenStream2;
 use syn::{DataStruct, DeriveInput, Field};
 
 mod generate;
@@ -110,7 +110,7 @@ pub fn setters(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
-fn produce(ast: &DeriveInput, worker: fn(&Field) -> Tokens) -> Tokens {
+fn produce(ast: &DeriveInput, worker: fn(&Field) -> TokenStream2) -> TokenStream2 {
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
