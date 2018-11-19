@@ -1,6 +1,6 @@
-use proc_macro2::{Span, Term};
-use quote::Tokens;
-use syn::{Attribute, Field, Ident, Lit, Meta, MetaNameValue};
+use proc_macro2::{Ident, Span};
+use proc_macro2::TokenStream as TokenStream2;
+use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -18,12 +18,12 @@ fn attr_name(attr: &Attribute) -> Option<Ident> {
     attr.interpret_meta().map(|v| v.name())
 }
 
-pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
+pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream2 {
     let field_name = field
         .clone()
         .ident
         .expect("Expected the field to have a name");
-    let fn_name = Term::new(
+    let fn_name = Ident::new(
         &format!(
             "{}{}{}",
             params.fn_name_prefix, field_name, params.fn_name_suffix
@@ -82,7 +82,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> Tokens {
                     lit: Lit::Str(ref s),
                     ..
                 })) => {
-                    let visibility = Term::new(&s.value(), s.span());
+                    let visibility = Ident::new(&s.value(), s.span());
                     match mode {
                         GenMode::Get => {
                             quote! {
