@@ -1,5 +1,4 @@
-use proc_macro2::{Ident, Span};
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
 
 pub struct GenParams {
@@ -47,7 +46,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
     match attr {
         Some(attr) => {
             match attr.interpret_meta() {
-                // `#[get]` or `#[set]`
+                // `#[get]`, `#[get_deref] or `#[set]`
                 Some(Meta::Word(_)) => match mode {
                     GenMode::Get => {
                         quote! {
@@ -85,11 +84,29 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                     let visibility = Ident::new(&s.value(), s.span());
                     match mode {
                         GenMode::Get => {
-                            quote! {
-                                #(#doc)*
-                                #[inline(always)]
-                                #visibility fn #fn_name(&self) -> &#ty {
-                                    &self.#field_name
+                            let (visibility, deref) = {
+                                let visibility = if s.value().contains("pub") {
+                                    Ident::new("pub", s.span())
+                                } else {
+                                    Ident::new("", s.span())
+                                };
+                                (visibility, s.value().contains("deref"))
+                            };
+                            if deref {
+                                quote! {
+                                    #(#doc)*
+                                    #[inline(always)]
+                                    #visibility fn #fn_name(&self) -> #ty {
+                                        self.#field_name
+                                    }
+                                }
+                            } else {
+                                quote! {
+                                    #(#doc)*
+                                    #[inline(always)]
+                                    #visibility fn #fn_name(&self) -> &#ty {
+                                        &self.#field_name
+                                    }
                                 }
                             }
                         }
@@ -133,6 +150,6 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
             }
         }
         // Don't need to do anything.
-        None => quote!{},
+        None => quote! {},
     }
 }

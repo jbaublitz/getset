@@ -71,7 +71,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(MutGetters, attributes(get_mut))]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast = syn::parse(input).expect("Couldn't parse for getters");
+    let ast = syn::parse(input).expect("Couldn't parse for mutable getters");
     // Build the impl
     let gen = produce(&ast, |f| {
         generate::implement(
