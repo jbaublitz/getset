@@ -3,6 +3,7 @@ use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
+    pub optional_attrs: &'static [&'static str],
     pub fn_name_prefix: &'static str,
     pub fn_name_suffix: &'static str,
 }
@@ -21,7 +22,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
     let field_name = field
         .clone()
         .ident
-        .expect("Expected the field to have a name");
+        .expect("expected the field to have a name");
     let fn_name = Ident::new(
         &format!(
             "{}{}{}",
@@ -31,33 +32,88 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
     );
     let ty = field.ty.clone();
 
-    let attr = field
+    let attrs = field
         .attrs
         .iter()
-        .filter(|v| attr_name(v).expect("attribute") == params.attribute_name)
-        .last();
+        .filter(|v| {
+            let attr_name = attr_name(v).expect("expected attribute");
+            attr_name == params.attribute_name
+                || params.optional_attrs.iter().any(|n| attr_name == *n)
+        })
+        .collect::<Vec<_>>();
 
     let doc = field
         .attrs
         .iter()
-        .filter(|v| attr_name(v).expect("attribute") == "doc")
+        .filter(|v| attr_name(v).expect("expected attribute") == "doc")
         .collect::<Vec<_>>();
 
-    match attr {
-        Some(attr) => {
-            match attr.interpret_meta() {
-                // `#[get]`, `#[get_deref] or `#[set]`
-                Some(Meta::Word(_)) => match mode {
-                    GenMode::Get => {
-                        quote! {
-                            #(#doc)*
-                            #[inline(always)]
-                            fn #fn_name(&self) -> &#ty {
-                                &self.#field_name
+    if attrs.is_empty() {
+        // Don't need to do anything.
+        quote! {}
+    } else {
+        match mode {
+            GenMode::Get => {
+                let deref = attrs
+                    .iter()
+                    .any(|v| attr_name(v).expect("expected attribute") == "deref");
+                let vis_attr = attrs
+                    .iter()
+                    .find(|v| attr_name(v).expect("expected attribute") == params.attribute_name)
+                    .expect("no #[get] attribute found");
+                match vis_attr.interpret_meta() {
+                    // `$[get]`
+                    Some(Meta::Word(_)) => {
+                        if deref {
+                            quote! {
+                                #(#doc)*
+                                #[inline(always)]
+                                fn #fn_name(&self) -> #ty {
+                                    self.#field_name
+                                }
+                            }
+                        } else {
+                            quote! {
+                                #(#doc)*
+                                #[inline(always)]
+                                fn #fn_name(&self) -> &#ty {
+                                    &self.#field_name
+                                }
                             }
                         }
                     }
-                    GenMode::Set => {
+                    // `$[get = "pub"]`
+                    Some(Meta::NameValue(MetaNameValue {
+                        lit: Lit::Str(ref s),
+                        ..
+                    })) => {
+                        let visibility = Ident::new(&s.value(), s.span());
+                        if deref {
+                            quote! {
+                                #(#doc)*
+                                #[inline(always)]
+                                #visibility fn #fn_name(&self) -> #ty {
+                                    self.#field_name
+                                }
+                            }
+                        } else {
+                            quote! {
+                                #(#doc)*
+                                #[inline(always)]
+                                #visibility fn #fn_name(&self) -> &#ty {
+                                    &self.#field_name
+                                }
+                            }
+                        }
+                    }
+                    _ => panic!("unexpected attribute parameters"),
+                }
+            }
+            GenMode::Set => {
+                let attr = attrs[0];
+                match attr.interpret_meta() {
+                    // `$[set]`
+                    Some(Meta::Word(_)) => {
                         quote! {
                             #(#doc)*
                             #[inline(always)]
@@ -67,7 +123,29 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                             }
                         }
                     }
-                    GenMode::GetMut => {
+                    // `$[set = "pub"]`
+                    Some(Meta::NameValue(MetaNameValue {
+                        lit: Lit::Str(ref s),
+                        ..
+                    })) => {
+                        let visibility = Ident::new(&s.value(), s.span());
+                        quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
+                                self.#field_name = val;
+                                self
+                            }
+                        }
+                    }
+                    _ => panic!("unexpected attribute parameters"),
+                }
+            }
+            GenMode::GetMut => {
+                let attr = attrs[0];
+                match attr.interpret_meta() {
+                    // `$[get_mut]`
+                    Some(Meta::Word(_)) => {
                         quote! {
                             #(#doc)*
                             fn #fn_name(&mut self) -> &mut #ty {
@@ -75,81 +153,39 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                             }
                         }
                     }
-                },
-                // `#[get = "pub"]` or `#[set = "pub"]`
-                Some(Meta::NameValue(MetaNameValue {
-                    lit: Lit::Str(ref s),
-                    ..
-                })) => {
-                    let visibility = Ident::new(&s.value(), s.span());
-                    match mode {
-                        GenMode::Get => {
-                            let (visibility, deref) = {
-                                let visibility = if s.value().contains("pub") {
-                                    Ident::new("pub", s.span())
-                                } else {
-                                    Ident::new("", s.span())
-                                };
-                                (visibility, s.value().contains("deref"))
-                            };
-                            if deref {
-                                quote! {
-                                    #(#doc)*
-                                    #[inline(always)]
-                                    #visibility fn #fn_name(&self) -> #ty {
-                                        self.#field_name
-                                    }
-                                }
-                            } else {
-                                quote! {
-                                    #(#doc)*
-                                    #[inline(always)]
-                                    #visibility fn #fn_name(&self) -> &#ty {
-                                        &self.#field_name
-                                    }
-                                }
-                            }
-                        }
-                        GenMode::Set => {
-                            quote! {
-                                #(#doc)*
-                                #[inline(always)]
-                                #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                                    self.#field_name = val;
-                                    self
-                                }
-                            }
-                        }
-                        GenMode::GetMut => {
-                            quote! {
-                                #(#doc)*
-                                #visibility fn #fn_name(&mut self) -> &mut #ty {
-                                    &mut self.#field_name
-                                }
+                    // `$[get_mut = "pub"]`
+                    Some(Meta::NameValue(MetaNameValue {
+                        lit: Lit::Str(ref s),
+                        ..
+                    })) => {
+                        let visibility = Ident::new(&s.value(), s.span());
+                        quote! {
+                            #(#doc)*
+                            #visibility fn #fn_name(&mut self) -> &mut #ty {
+                                &mut self.#field_name
                             }
                         }
                     }
+                    _ => panic!("unexpected attribute parameters"),
+                    // This currently doesn't work, but it might in the future.
+                    // `#[get(pub)]`
+                    // MetaItem::List(_, ref vec) => {
+                    //     let s = vec.iter().last().expect("No item found in attribute list.");
+                    //     let visibility = match s {
+                    //         &NestedMetaItem::MetaItem(MetaItem::Word(ref i)) => {
+                    //             Ident::new(format!("{}", i))
+                    //         }
+                    //         &NestedMetaItem::Literal(Lit::Str(ref l, _)) => Ident::from(l.clone()),
+                    //         _ => panic!("Unexpected attribute parameters."),
+                    //     };
+                    //     quote! {
+                    //         #visibility fn #fn_name(&self) -> &#ty {
+                    //             &self.#field_name
+                    //         }
+                    //     }
+                    // }
                 }
-                // This currently doesn't work, but it might in the future.
-                //
-                // // `#[get(pub)]`
-                // MetaItem::List(_, ref vec) => {
-                //     let s = vec.iter().last().expect("No item found in attribute list.");
-                //     let visibility = match s {
-                //         &NestedMetaItem::MetaItem(MetaItem::Word(ref i)) => Ident::new(format!("{}", i)),
-                //         &NestedMetaItem::Literal(Lit::Str(ref l, _)) => Ident::from(l.clone()),
-                //         _ => panic!("Unexpected attribute parameters."),
-                //     };
-                //     quote! {
-                //         #visibility fn #fn_name(&self) -> &#ty {
-                //             &self.#field_name
-                //         }
-                //     }
-                // },
-                _ => panic!("Unexpected attribute parameters."),
             }
         }
-        // Don't need to do anything.
-        None => quote! {},
     }
 }
