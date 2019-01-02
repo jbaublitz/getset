@@ -16,7 +16,6 @@ repository = "https://github.com/Hoverbear/getset"
 
 [badges]
 travis-ci = { repository = "Hoverbear/getset" }
-appveyor = { repository = "Hoverbear/getset", service = "github" }
 
 [lib]
 proc-macro = true
