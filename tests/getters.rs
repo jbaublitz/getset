@@ -14,9 +14,19 @@ mod submodule {
             #[get]
             private_accessible: usize,
 
+            /// A doc comment
+            #[get]
+            #[deref]
+            private_accessible_deref: u32,
+
             /// A doc comment.
             #[get = "pub"]
             public_accessible: usize,
+
+            /// A doc comment
+            #[get = "pub"]
+            #[deref]
+            public_accessible_deref: u32,
             // /// A doc comment.
             // #[get = "pub(crate)"]
             // crate_accessible: usize,
@@ -34,7 +44,9 @@ mod submodule {
             fn default() -> Plain {
                 Plain {
                     private_accessible: 17,
-                    public_accessible: 18,
+                    private_accessible_deref: 18,
+                    public_accessible: 19,
+                    public_accessible_deref: 20,
                 }
             }
         }
@@ -47,8 +59,18 @@ mod submodule {
             private_accessible: T,
 
             /// A doc comment.
+            #[get]
+            #[deref]
+            private_accessible_deref: T,
+
+            /// A doc comment.
             #[get = "pub"]
             public_accessible: T,
+
+            /// A doc comment.
+            #[get = "pub"]
+            #[deref]
+            public_accessible_deref: T,
             // /// A doc comment.
             // #[get = "pub(crate)"]
             // crate_accessible: usize,
@@ -73,8 +95,18 @@ mod submodule {
             private_accessible: T,
 
             /// A doc comment.
+            #[get]
+            #[deref]
+            private_accessible_deref: T,
+
+            /// A doc comment.
             #[get = "pub"]
             public_accessible: T,
+
+            /// A doc comment.
+            #[get = "pub"]
+            #[deref]
+            public_accessible_deref: T,
             // /// A doc comment.
             // #[get = "pub(crate)"]
             // crate_accessible: usize,
@@ -92,18 +124,21 @@ mod submodule {
         fn test_plain() {
             let val = Plain::default();
             val.private_accessible();
+            val.private_accessible_deref();
         }
 
         #[test]
         fn test_generic() {
             let val = Generic::<usize>::default();
             val.private_accessible();
+            val.private_accessible_deref();
         }
 
         #[test]
         fn test_where() {
             let val = Where::<usize>::default();
             val.private_accessible();
+            val.private_accessible_deref();
         }
     }
 }
@@ -111,17 +146,20 @@ mod submodule {
 #[test]
 fn test_plain() {
     let val = Plain::default();
-    assert_eq!(18, *val.public_accessible());
+    assert_eq!(19, *val.public_accessible());
+    assert_eq!(20, val.public_accessible_deref());
 }
 
 #[test]
 fn test_generic() {
     let val = Generic::<usize>::default();
     assert_eq!(usize::default(), *val.public_accessible());
+    assert_eq!(usize::default(), val.public_accessible_deref());
 }
 
 #[test]
 fn test_where() {
     let val = Where::<usize>::default();
     assert_eq!(usize::default(), *val.public_accessible());
+    assert_eq!(usize::default(), val.public_accessible_deref());
 }

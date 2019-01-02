@@ -62,7 +62,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                     .find(|v| attr_name(v).expect("expected attribute") == params.attribute_name)
                     .expect("no #[get] attribute found");
                 match vis_attr.interpret_meta() {
-                    // `$[get]`
+                    // `#[get]`
                     Some(Meta::Word(_)) => {
                         if deref {
                             quote! {
@@ -82,7 +82,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                             }
                         }
                     }
-                    // `$[get = "pub"]`
+                    // `#[get = "pub"]`
                     Some(Meta::NameValue(MetaNameValue {
                         lit: Lit::Str(ref s),
                         ..
@@ -112,7 +112,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
             GenMode::Set => {
                 let attr = attrs[0];
                 match attr.interpret_meta() {
-                    // `$[set]`
+                    // `#[set]`
                     Some(Meta::Word(_)) => {
                         quote! {
                             #(#doc)*
@@ -123,7 +123,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                             }
                         }
                     }
-                    // `$[set = "pub"]`
+                    // `#[set = "pub"]`
                     Some(Meta::NameValue(MetaNameValue {
                         lit: Lit::Str(ref s),
                         ..
@@ -144,7 +144,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
             GenMode::GetMut => {
                 let attr = attrs[0];
                 match attr.interpret_meta() {
-                    // `$[get_mut]`
+                    // `#[get_mut]`
                     Some(Meta::Word(_)) => {
                         quote! {
                             #(#doc)*
@@ -153,7 +153,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                             }
                         }
                     }
-                    // `$[get_mut = "pub"]`
+                    // `#[get_mut = "pub"]`
                     Some(Meta::NameValue(MetaNameValue {
                         lit: Lit::Str(ref s),
                         ..
