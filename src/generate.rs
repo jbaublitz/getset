@@ -1,5 +1,5 @@
-use proc_macro2::{Ident, Span};
 use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Ident, Span};
 use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
 
 pub struct GenParams {
@@ -133,6 +133,6 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
             }
         }
         // Don't need to do anything.
-        None => quote!{},
+        None => quote! {},
     }
 }
