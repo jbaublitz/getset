@@ -15,8 +15,7 @@ readme = "README.md"
 repository = "https://github.com/Hoverbear/getset"
 
 [badges]
-travis-ci = { repository = "https://github.com/Hoverbear/getset" }
-appveyor = { repository = "https://github.com/Hoverbear/getset", service = "github" }
+travis-ci = { repository = "Hoverbear/getset" }
 
 [lib]
 proc-macro = true
