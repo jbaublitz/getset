@@ -74,11 +74,11 @@ fn attr_name(attr: &Attribute) -> Option<Ident> {
 
 /// Some users want legacy/compatability.
 /// (Getters are often prefixed with `get_`)
-fn has_with_prefix_set(f: &Field) -> bool {
+fn has_prefix_attr(f: &Field) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter(|v| attr_name(v).expect("attribute") == "get")
+        .filter(|v| attr_name(v).expect("Could not get attribute") == "get")
         .last()
         .and_then(|v| v.parse_meta().ok());
     match inner {
@@ -104,7 +104,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 
     // Build the impl
     let gen = produce(&ast, |f| {
-        let prefix = if has_with_prefix_set(f) { "get_" } else { "" };
+        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
 
         generate::implement(
             f,
@@ -127,7 +127,7 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("Couldn't parse for getters");
     // Build the impl
     let gen = produce(&ast, |f| {
-        let prefix = if has_with_prefix_set(f) { "get_" } else { "" };
+        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
 
         generate::implement(
             f,

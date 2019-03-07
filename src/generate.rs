@@ -84,7 +84,7 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                 })) => {
                     let tokens = s.value();
                     let visibility =
-                        if let Some(t) = tokens.split(" ").find(|v| v.starts_with("pub")) {
+                        if let Some(t) = tokens.split(" ").find(|v| *v != "with_prefix") {
                             Some(Ident::new(&t, s.span()))
                         } else {
                             None
