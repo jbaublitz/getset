@@ -77,12 +77,18 @@ pub fn implement(field: &Field, mode: GenMode, params: GenParams) -> TokenStream
                         }
                     }
                 },
-                // `#[get = "pub"]` or `#[set = "pub"]`
+                // `#[get = "pub with_prefix"]` or `#[set = "pub"]`
                 Some(Meta::NameValue(MetaNameValue {
                     lit: Lit::Str(ref s),
                     ..
                 })) => {
-                    let visibility = Ident::new(&s.value(), s.span());
+                    let tokens = s.value();
+                    let visibility =
+                        if let Some(t) = tokens.split(" ").find(|v| *v != "with_prefix") {
+                            Some(Ident::new(&t, s.span()))
+                        } else {
+                            None
+                        };
                     match mode {
                         GenMode::Get => {
                             quote! {
