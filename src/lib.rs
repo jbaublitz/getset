@@ -3,9 +3,11 @@ Getset, we're ready to go!
 
 A procedural macro for generating the most basic getters and setters on fields.
 
-Getters are generated as `fn field(&self) -> &type`, while setters are generated as `fn field(&mut self, val: type)`.
+Getters are generated as `fn field(&self) -> &type`, while setters are generated
+as `fn field(&mut self, val: type)`.
 
-These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
+These macros are not intended to be used on fields which require custom logic
+inside of their setters and getters. Just write your own in that case!
 
 ```rust
 #[macro_use]
@@ -31,6 +33,26 @@ fn main() {
     assert_eq!(*foo.private(), 2);
 }
 ```
+
+For some purposes, it's useful to have the `get_` prefix on the getters for
+either legacy of compatability reasons. It is done with `get-prefix`.
+
+```rust
+#[macro_use]
+extern crate getset;
+
+#[derive(Getters, Default)]
+pub struct Foo {
+    #[get = "pub with_prefix"]
+    field: bool,
+}
+
+fn main() {
+    let mut foo = Foo::default();
+    let val = foo.get_field();
+}
+```
+
 */
 
 extern crate proc_macro;
@@ -41,24 +63,55 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{DataStruct, DeriveInput, Field};
+use syn::{Attribute, DataStruct, DeriveInput, Field, Ident, Lit, Meta};
 
 mod generate;
 use generate::{GenMode, GenParams};
 
-#[proc_macro_derive(Getters, attributes(get))]
+fn attr_name(attr: &Attribute) -> Option<Ident> {
+    attr.interpret_meta().map(|v| v.name())
+}
+
+/// Some users want legacy/compatability.
+/// (Getters are often prefixed with `get_`)
+fn has_prefix_attr(f: &Field) -> bool {
+    let inner = f
+        .attrs
+        .iter()
+        .filter(|v| attr_name(v).expect("Could not get attribute") == "get")
+        .last()
+        .and_then(|v| v.parse_meta().ok());
+    match inner {
+        Some(Meta::NameValue(meta)) => {
+            if let Lit::Str(lit) = meta.lit {
+                // Naive tokenization to avoid a possible visibility mod named `with_prefix`.
+                lit.value()
+                    .split(" ")
+                    .find(|v| *v == "with_prefix")
+                    .is_some()
+            } else {
+                false
+            }
+        }
+        _ => false,
+    }
+}
+
+#[proc_macro_derive(Getters, attributes(get, with_prefix))]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast = syn::parse(input).expect("Couldn't parse for getters");
 
     // Build the impl
     let gen = produce(&ast, |f| {
+        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
+
         generate::implement(
             f,
             GenMode::Get,
             GenParams {
                 attribute_name: "get",
-                fn_name_prefix: "",
+                fn_name_prefix: prefix,
                 fn_name_suffix: "",
             },
         )
@@ -74,12 +127,14 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).expect("Couldn't parse for getters");
     // Build the impl
     let gen = produce(&ast, |f| {
+        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
+
         generate::implement(
             f,
             GenMode::GetMut,
             GenParams {
                 attribute_name: "get_mut",
-                fn_name_prefix: "",
+                fn_name_prefix: prefix,
                 fn_name_suffix: "_mut",
             },
         )
