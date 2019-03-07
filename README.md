@@ -1,7 +1,7 @@
 # getset
 
 [![Build Status](https://travis-ci.org/Hoverbear/getset.svg?branch=master)](https://travis-ci.org/Hoverbear/getset)
-[![Build status](https://ci.appveyor.com/api/projects/status/w8v2poyjwsy5d05k?svg=true)](https://ci.appveyor.com/project/Hoverbear/getset)
+[![Docs](https://docs.rs/mio/badge.svg)](https://docs.rs/getset/)
 
 Getset, we're ready to go!
 
