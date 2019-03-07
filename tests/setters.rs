@@ -8,10 +8,10 @@ mod submodule {
     // For testing `pub(in super::other)`
     pub mod other {
         #[derive(Setters, Default)]
+        #[set]
         pub struct Plain {
             /// A doc comment.
             /// Multiple lines, even.
-            #[set]
             private_accessible: usize,
 
             /// A doc comment.
@@ -35,10 +35,10 @@ mod submodule {
         }
 
         #[derive(Setters, Default)]
+        #[set]
         pub struct Generic<T: Copy + Clone + Default> {
             /// A doc comment.
             /// Multiple lines, even.
-            #[set]
             private_accessible: T,
 
             /// A doc comment.
@@ -58,13 +58,13 @@ mod submodule {
         }
 
         #[derive(Setters, Default)]
+        #[set]
         pub struct Where<T>
         where
             T: Copy + Clone + Default,
         {
             /// A doc comment.
             /// Multiple lines, even.
-            #[set]
             private_accessible: T,
 
             /// A doc comment.
