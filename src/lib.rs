@@ -34,6 +34,32 @@ fn main() {
 }
 ```
 
+Attributes can be set on struct level for all fields in struct as well. Field level attributes take
+precedence.
+
+```rust
+#[macro_use]
+extern crate getset;
+
+mod submodule {
+    #[derive(Getters, Default)]
+    #[get = "pub"] // By default add a pub getting for all fields.
+    pub struct Foo {
+        public: i32,
+        #[get] // Override as private
+        private: i32,
+    }
+    fn demo() {
+        let mut foo = Foo::default();
+        foo.private();
+    }
+}
+fn main() {
+    let mut foo = submodule::Foo::default();
+    foo.public();
+}
+```
+
 For some purposes, it's useful to have the `get_` prefix on the getters for
 either legacy of compatability reasons. It is done with `get-prefix`.
 
@@ -52,7 +78,6 @@ fn main() {
     let val = foo.get_field();
 }
 ```
-
 */
 
 extern crate proc_macro;
@@ -63,7 +88,7 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Attribute, DataStruct, DeriveInput, Field, Ident, Lit, Meta};
+use syn::{Attribute, DataStruct, DeriveInput, Ident, Meta};
 
 mod generate;
 use generate::{GenMode, GenParams};
@@ -72,50 +97,19 @@ fn attr_name(attr: &Attribute) -> Option<Ident> {
     attr.interpret_meta().map(|v| v.name())
 }
 
-/// Some users want legacy/compatability.
-/// (Getters are often prefixed with `get_`)
-fn has_prefix_attr(f: &Field) -> bool {
-    let inner = f
-        .attrs
-        .iter()
-        .filter(|v| attr_name(v).expect("Could not get attribute") == "get")
-        .last()
-        .and_then(|v| v.parse_meta().ok());
-    match inner {
-        Some(Meta::NameValue(meta)) => {
-            if let Lit::Str(lit) = meta.lit {
-                // Naive tokenization to avoid a possible visibility mod named `with_prefix`.
-                lit.value()
-                    .split(" ")
-                    .find(|v| *v == "with_prefix")
-                    .is_some()
-            } else {
-                false
-            }
-        }
-        _ => false,
-    }
-}
-
 #[proc_macro_derive(Getters, attributes(get, with_prefix))]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let params = GenParams {
+        attribute_name: "get",
+        fn_name_prefix: "",
+        fn_name_suffix: "",
+        global_attr: parse_global_attr(&ast.attrs, "get"),
+    };
 
     // Build the impl
-    let gen = produce(&ast, |f| {
-        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
-
-        generate::implement(
-            f,
-            GenMode::Get,
-            GenParams {
-                attribute_name: "get",
-                fn_name_prefix: prefix,
-                fn_name_suffix: "",
-            },
-        )
-    });
+    let gen = produce(&ast, &GenMode::Get, &params);
 
     // Return the generated impl
     gen.into()
@@ -124,21 +118,16 @@ pub fn getters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(MutGetters, attributes(get_mut))]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast = syn::parse(input).expect("Couldn't parse for getters");
-    // Build the impl
-    let gen = produce(&ast, |f| {
-        let prefix = if has_prefix_attr(f) { "get_" } else { "" };
+    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let params = GenParams {
+        attribute_name: "get_mut",
+        fn_name_prefix: "",
+        fn_name_suffix: "_mut",
+        global_attr: parse_global_attr(&ast.attrs, "get_mut"),
+    };
 
-        generate::implement(
-            f,
-            GenMode::GetMut,
-            GenParams {
-                attribute_name: "get_mut",
-                fn_name_prefix: prefix,
-                fn_name_suffix: "_mut",
-            },
-        )
-    });
+    // Build the impl
+    let gen = produce(&ast, &GenMode::GetMut, &params);
     // Return the generated impl
     gen.into()
 }
@@ -146,33 +135,46 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_derive(Setters, attributes(set))]
 pub fn setters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast = syn::parse(input).expect("Couldn't parse for setters");
+    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for setters");
+    let params = GenParams {
+        attribute_name: "set",
+        fn_name_prefix: "set_",
+        fn_name_suffix: "",
+        global_attr: parse_global_attr(&ast.attrs, "set"),
+    };
 
     // Build the impl
-    let gen = produce(&ast, |f| {
-        generate::implement(
-            f,
-            GenMode::Set,
-            GenParams {
-                attribute_name: "set",
-                fn_name_prefix: "set_",
-                fn_name_suffix: "",
-            },
-        )
-    });
+    let gen = produce(&ast, &GenMode::Set, &params);
 
     // Return the generated impl
     gen.into()
 }
 
-fn produce(ast: &DeriveInput, worker: fn(&Field) -> TokenStream2) -> TokenStream2 {
+fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<Meta> {
+    attrs
+        .iter()
+        .filter_map(|v| {
+            let (attr_name, meta) = generate::attr_tuple(v).expect("attribute");
+            if attr_name == attribute_name {
+                Some(meta)
+            } else {
+                None
+            }
+        })
+        .last()
+}
+
+fn produce(ast: &DeriveInput, mode: &GenMode, params: &GenParams) -> TokenStream2 {
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
     if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
-        let generated = fields.iter().map(worker).collect::<Vec<_>>();
+        let generated = fields
+            .iter()
+            .map(|f| generate::implement(f, mode, params))
+            .collect::<Vec<_>>();
 
         quote! {
             impl #impl_generics #name #ty_generics #where_clause {
