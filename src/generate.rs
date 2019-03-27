@@ -1,4 +1,4 @@
-use attr_name;
+use crate::attr_name;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
 use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
