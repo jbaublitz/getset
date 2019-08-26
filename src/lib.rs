@@ -91,7 +91,7 @@ use proc_macro2::TokenStream as TokenStream2;
 use syn::{Attribute, DataStruct, DeriveInput, Ident, Meta};
 
 mod generate;
-use generate::{GenMode, GenParams};
+use crate::generate::{GenMode, GenParams};
 
 fn attr_name(attr: &Attribute) -> Option<Ident> {
     attr.interpret_meta().map(|v| v.name())

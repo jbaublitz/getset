@@ -8,6 +8,7 @@ A procedural macro for generating the most basic getters and setters on fields.
 version = "0.0.7"
 authors = ["Ana Hobden <ana@hoverbear.org>"]
 license = "MIT"
+edition = "2018"
 
 categories = ["development-tools::procedural-macro-helpers"]
 keywords = ["macro", "getter", "setter", "getters", "setters"]
