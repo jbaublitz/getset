@@ -21,10 +21,10 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
         // `#[get = "pub"]` or `#[set = "pub"]`
         Some(Meta::NameValue(MetaNameValue {
             lit: Lit::Str(ref s),
-            ident,
+            path,
             ..
         })) => {
-            if ident == meta_name {
+            if path.is_ident(meta_name) {
                 s.value()
                     .split(' ')
                     .find(|v| *v != "with_prefix")
@@ -45,7 +45,7 @@ fn has_prefix_attr(f: &Field) -> bool {
         .iter()
         .filter_map(|v| {
             let meta = v.parse_meta().expect("Could not get attribute");
-            if meta.name() == "get" {
+            if meta.path().is_ident("get") {
                 Some(meta)
             } else {
                 None
@@ -93,13 +93,13 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
         .iter()
         .filter_map(|v| {
             let meta = v.parse_meta().expect("attribute");
-            match meta.name().to_string().as_str() {
-                "doc" => {
-                    doc.push(v);
-                    None
-                }
-                name if params.attribute_name == name => Some(meta),
-                _ => None,
+            if meta.path().is_ident("doc") {
+                doc.push(v);
+                None
+            } else if meta.path().is_ident(params.attribute_name) {
+                Some(meta)
+            } else {
+                None
             }
         })
         .last()
