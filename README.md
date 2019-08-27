@@ -12,19 +12,25 @@ Getters are generated as `fn field(&self) -> &type`, while setters are generated
 These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
 
 ```rust
-#[macro_use]
-extern crate getset;
+use getset::{Getters, MutGetters, Setters};
 
 #[derive(Getters, Setters, MutGetters, Default)]
-pub struct Foo<T> where T: Copy + Clone + Default {
+pub struct Foo<T>
+where
+    T: Copy + Clone + Default,
+{
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get] #[set] #[get_mut]
+    #[get]
+    #[set]
+    #[get_mut]
     private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get = "pub"] #[set = "pub"] #[get_mut = "pub"]
+    #[get = "pub"]
+    #[set = "pub"]
+    #[get_mut = "pub"]
     public: T,
 }
 
@@ -33,6 +39,102 @@ fn main() {
     foo.set_private(1);
     (*foo.private_mut()) += 1;
     assert_eq!(*foo.private(), 2);
+}
+```
+
+The above structure definition generates the following output.
+
+```rust
+#![feature(prelude_import)]
+#![no_std]
+#[prelude_import]
+use ::std::prelude::v1::*;
+#[macro_use]
+extern crate std as std;
+use getset::{Getters, MutGetters, Setters};
+pub struct Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[get]
+    #[set]
+    #[get_mut]
+    private: T,
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[get = "pub"]
+    #[set = "pub"]
+    #[get_mut = "pub"]
+    public: T,
+}
+impl<T> Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    fn private(&self) -> &T {
+        &self.private
+    }
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    pub fn public(&self) -> &T {
+        &self.public
+    }
+}
+impl<T> Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    fn set_private(&mut self, val: T) -> &mut Self {
+        self.private = val;
+        self
+    }
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    pub fn set_public(&mut self, val: T) -> &mut Self {
+        self.public = val;
+        self
+    }
+}
+impl<T> Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    fn private_mut(&mut self) -> &mut T {
+        &mut self.private
+    }
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    pub fn public_mut(&mut self) -> &mut T {
+        &mut self.public
+    }
+}
+#[automatically_derived]
+#[allow(unused_qualifications)]
+impl<T: ::core::default::Default> ::core::default::Default for Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    #[inline]
+    fn default() -> Foo<T> {
+        Foo {
+            private: ::core::default::Default::default(),
+            public: ::core::default::Default::default(),
+        }
+    }
 }
 ```
 
