@@ -43,9 +43,15 @@ fn has_prefix_attr(f: &Field) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter(|v| v.parse_meta().expect("Could not get attribute").name() == "get")
-        .last()
-        .and_then(|v| v.parse_meta().ok());
+        .filter_map(|v| {
+            let meta = v.parse_meta().expect("Could not get attribute");
+            if meta.name() == "get" {
+                Some(meta)
+            } else {
+                None
+            }
+        })
+        .last();
     match inner {
         Some(Meta::NameValue(meta)) => {
             if let Lit::Str(lit) = meta.lit {
