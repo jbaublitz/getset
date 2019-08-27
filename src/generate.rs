@@ -1,7 +1,6 @@
-use crate::attr_name;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
+use syn::{Field, Lit, Meta, MetaNameValue};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -15,11 +14,6 @@ pub enum GenMode {
     Get,
     Set,
     GetMut,
-}
-
-pub fn attr_tuple(attr: &Attribute) -> Option<(Ident, Meta)> {
-    let meta = attr.interpret_meta();
-    meta.map(|v| (v.name(), v))
 }
 
 pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
@@ -49,7 +43,12 @@ fn has_prefix_attr(f: &Field) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter(|v| attr_name(v).expect("Could not get attribute") == "get")
+        .filter(|v| {
+            v.interpret_meta()
+                .map(|v| v.name())
+                .expect("Could not get attribute")
+                == "get"
+        })
         .last()
         .and_then(|v| v.parse_meta().ok());
     match inner {
@@ -92,13 +91,13 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
         .attrs
         .iter()
         .filter_map(|v| {
-            let tuple = attr_tuple(v).expect("attribute");
-            match tuple.0.to_string().as_str() {
+            let meta = v.interpret_meta().expect("attribute");
+            match meta.name().to_string().as_str() {
                 "doc" => {
                     doc.push(v);
                     None
                 }
-                name if params.attribute_name == name => Some(tuple.1),
+                name if params.attribute_name == name => Some(meta),
                 _ => None,
             }
         })
