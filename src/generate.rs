@@ -1,6 +1,6 @@
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use syn::{Field, Lit, Meta, MetaNameValue};
+use syn::{self, Field, Lit, Meta, MetaNameValue, Visibility};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -16,7 +16,7 @@ pub enum GenMode {
     GetMut,
 }
 
-pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
+pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
     match attr {
         // `#[get = "pub"]` or `#[set = "pub"]`
         Some(Meta::NameValue(MetaNameValue {
@@ -28,7 +28,7 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
                 s.value()
                     .split(' ')
                     .find(|v| *v != "with_prefix")
-                    .map(|v| Ident::new(&v, Span::call_site()))
+                    .map(|v| syn::parse(v.parse().unwrap()).expect("invalid visibility found"))
             } else {
                 None
             }
