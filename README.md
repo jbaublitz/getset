@@ -42,7 +42,7 @@ fn main() {
 }
 ```
 
-The above structure definition generates the following output.
+The above structure definition generates the following output with `cargo expand`.
 
 ```rust
 #![feature(prelude_import)]
