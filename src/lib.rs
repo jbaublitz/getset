@@ -253,7 +253,7 @@ fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<M
     attrs
         .iter()
         .filter_map(|v| {
-            let meta = v.interpret_meta().expect("attribute");
+            let meta = v.parse_meta().expect("attribute");
             if meta.name() == attribute_name {
                 Some(meta)
             } else {
