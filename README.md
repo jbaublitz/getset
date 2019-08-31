@@ -12,9 +12,9 @@ Getters are generated as `fn field(&self) -> &type`, while setters are generated
 These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
 
 ```rust
-use getset::{Getters, MutGetters, Setters};
+use getset::{Getters, MutGetters, CopyGetters, Setters};
 
-#[derive(Getters, Setters, MutGetters, Default)]
+#[derive(Getters, Setters, MutGetters, CopyGetters, Default)]
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
@@ -28,7 +28,7 @@ where
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     #[set = "pub"]
     #[get_mut = "pub"]
     public: T,
@@ -51,7 +51,7 @@ The above structure definition generates the following output with `cargo expand
 use ::std::prelude::v1::*;
 #[macro_use]
 extern crate std as std;
-use getset::{Getters, MutGetters, Setters};
+use getset::{Getters, MutGetters, CopyGetters, Setters};
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
@@ -64,7 +64,7 @@ where
     private: T,
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get = "pub"]
+    #[get_copy = "pub"]
     #[set = "pub"]
     #[get_mut = "pub"]
     public: T,
@@ -82,8 +82,8 @@ where
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
-    pub fn public(&self) -> &T {
-        &self.public
+    pub fn public(&self) -> T {
+        self.public
     }
 }
 impl<T> Foo<T>
@@ -146,11 +146,11 @@ precedence.
 extern crate getset;
 
 mod submodule {
-    #[derive(Getters, Default)]
-    #[get = "pub"] // By default add a pub getting for all fields.
+    #[derive(Getters, CopyGetters, Default)]
+    #[get_copy = "pub"] // By default add a pub getting for all fields.
     pub struct Foo {
         public: i32,
-        #[get] // Override as private
+        #[get_copy] // Override as private
         private: i32,
     }
     fn demo() {
