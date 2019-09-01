@@ -191,14 +191,10 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use syn::{Attribute, DataStruct, DeriveInput, Ident, Meta};
+use syn::{DataStruct, DeriveInput, Meta};
 
 mod generate;
 use crate::generate::{GenMode, GenParams};
-
-fn attr_name(attr: &Attribute) -> Option<Ident> {
-    attr.interpret_meta().map(|v| v.name())
-}
 
 #[proc_macro_derive(Getters, attributes(get, with_prefix))]
 pub fn getters(input: TokenStream) -> TokenStream {
@@ -257,8 +253,8 @@ fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<M
     attrs
         .iter()
         .filter_map(|v| {
-            let (attr_name, meta) = generate::attr_tuple(v).expect("attribute");
-            if attr_name == attribute_name {
+            let meta = v.parse_meta().expect("attribute");
+            if meta.path().is_ident(attribute_name) {
                 Some(meta)
             } else {
                 None

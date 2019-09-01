@@ -57,7 +57,7 @@ mod submodule {
             private_accessible: T,
 
             /// A doc comment.
-            #[get = "pub"]
+            #[get = "pub(crate)"]
             public_accessible: T,
             // /// A doc comment.
             // #[get = "pub(crate)"]

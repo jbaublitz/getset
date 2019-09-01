@@ -1,7 +1,6 @@
-use crate::attr_name;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use syn::{Attribute, Field, Lit, Meta, MetaNameValue};
+use syn::{self, Field, Lit, Meta, MetaNameValue, Visibility};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -17,24 +16,19 @@ pub enum GenMode {
     GetMut,
 }
 
-pub fn attr_tuple(attr: &Attribute) -> Option<(Ident, Meta)> {
-    let meta = attr.interpret_meta();
-    meta.map(|v| (v.name(), v))
-}
-
-pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Ident> {
+pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
     match attr {
         // `#[get = "pub"]` or `#[set = "pub"]`
         Some(Meta::NameValue(MetaNameValue {
             lit: Lit::Str(ref s),
-            ident,
+            path,
             ..
         })) => {
-            if ident == meta_name {
+            if path.is_ident(meta_name) {
                 s.value()
                     .split(' ')
                     .find(|v| *v != "with_prefix")
-                    .map(|v| Ident::new(&v, Span::call_site()))
+                    .map(|v| syn::parse(v.parse().unwrap()).expect("invalid visibility found"))
             } else {
                 None
             }
@@ -49,9 +43,15 @@ fn has_prefix_attr(f: &Field) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter(|v| attr_name(v).expect("Could not get attribute") == "get")
-        .last()
-        .and_then(|v| v.parse_meta().ok());
+        .filter_map(|v| {
+            let meta = v.parse_meta().expect("Could not get attribute");
+            if meta.path().is_ident("get") {
+                Some(meta)
+            } else {
+                None
+            }
+        })
+        .last();
     match inner {
         Some(Meta::NameValue(meta)) => {
             if let Lit::Str(lit) = meta.lit {
@@ -92,14 +92,14 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
         .attrs
         .iter()
         .filter_map(|v| {
-            let tuple = attr_tuple(v).expect("attribute");
-            match tuple.0.to_string().as_str() {
-                "doc" => {
-                    doc.push(v);
-                    None
-                }
-                name if params.attribute_name == name => Some(tuple.1),
-                _ => None,
+            let meta = v.parse_meta().expect("attribute");
+            if meta.path().is_ident("doc") {
+                doc.push(v);
+                None
+            } else if meta.path().is_ident(params.attribute_name) {
+                Some(meta)
+            } else {
+                None
             }
         })
         .last()
