@@ -47,7 +47,7 @@ fn has_prefix_attr(f: &Field) -> bool {
         .filter_map(|v| {
             let meta = v.parse_meta().expect("Could not get attribute");
             if ["get", "get_copy"]
-                .into_iter()
+                .iter()
                 .any(|ident| meta.path().is_ident(ident))
             {
                 Some(meta)
