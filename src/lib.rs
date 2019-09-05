@@ -223,7 +223,7 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
     };
 
     // Build the impl
-    let gen = produce(&ast, &GenMode::GetByCopy, &params);
+    let gen = produce(&ast, &GenMode::GetCopy, &params);
 
     // Return the generated impl
     gen.into()

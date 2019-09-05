@@ -12,7 +12,7 @@ pub struct GenParams {
 #[derive(PartialEq, Eq)]
 pub enum GenMode {
     Get,
-    GetByCopy,
+    GetCopy,
     Set,
     GetMut,
 }
@@ -79,9 +79,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
         &format!(
             "{}{}{}{}",
             if has_prefix_attr(field)
-                && (*mode == GenMode::Get
-                    || *mode == GenMode::GetByCopy
-                    || *mode == GenMode::GetMut)
+                && (*mode == GenMode::Get || *mode == GenMode::GetCopy || *mode == GenMode::GetMut)
             {
                 "get_"
             } else {
@@ -125,7 +123,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                     }
                 }
             }
-            GenMode::GetByCopy => {
+            GenMode::GetCopy => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
