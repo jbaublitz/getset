@@ -17,6 +17,15 @@ pub enum GenMode {
     GetMut,
 }
 
+impl GenMode {
+    fn is_get(&self) -> bool {
+        match self {
+            GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
+            GenMode::Set => false,
+        }
+    }
+}
+
 pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
     match attr {
         // `#[get = "pub"]` or `#[set = "pub"]`
@@ -78,9 +87,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
     let fn_name = Ident::new(
         &format!(
             "{}{}{}{}",
-            if has_prefix_attr(field)
-                && (*mode == GenMode::Get || *mode == GenMode::GetCopy || *mode == GenMode::GetMut)
-            {
+            if has_prefix_attr(field) && (mode.is_get()) {
                 "get_"
             } else {
                 ""
