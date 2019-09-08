@@ -12,8 +12,18 @@ pub struct GenParams {
 #[derive(PartialEq, Eq)]
 pub enum GenMode {
     Get,
+    GetCopy,
     Set,
     GetMut,
+}
+
+impl GenMode {
+    fn is_get(&self) -> bool {
+        match self {
+            GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
+            GenMode::Set => false,
+        }
+    }
 }
 
 pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
@@ -45,7 +55,10 @@ fn has_prefix_attr(f: &Field) -> bool {
         .iter()
         .filter_map(|v| {
             let meta = v.parse_meta().expect("Could not get attribute");
-            if meta.path().is_ident("get") {
+            if ["get", "get_copy"]
+                .iter()
+                .any(|ident| meta.path().is_ident(ident))
+            {
                 Some(meta)
             } else {
                 None
@@ -74,7 +87,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
     let fn_name = Ident::new(
         &format!(
             "{}{}{}{}",
-            if has_prefix_attr(field) && (*mode == GenMode::Get || *mode == GenMode::GetMut) {
+            if has_prefix_attr(field) && (mode.is_get()) {
                 "get_"
             } else {
                 ""
@@ -114,6 +127,15 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                     #[inline(always)]
                     #visibility fn #fn_name(&self) -> &#ty {
                         &self.#field_name
+                    }
+                }
+            }
+            GenMode::GetCopy => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&self) -> #ty {
+                        self.#field_name
                     }
                 }
             }
