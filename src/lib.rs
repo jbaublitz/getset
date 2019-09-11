@@ -1,3 +1,4 @@
+#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 /*!
 Getset, we're ready to go!
 

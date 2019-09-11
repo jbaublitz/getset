@@ -20,8 +20,8 @@ pub enum GenMode {
 impl GenMode {
     fn is_get(&self) -> bool {
         match self {
-            GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
-            GenMode::Set => false,
+            Self::Get | Self::GetCopy | Self::GetMut => true,
+            Self::Set => false,
         }
     }
 }
@@ -35,10 +35,13 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
             ..
         })) => {
             if path.is_ident(meta_name) {
-                s.value()
-                    .split(' ')
-                    .find(|v| *v != "with_prefix")
-                    .map(|v| syn::parse(v.parse().unwrap()).expect("invalid visibility found"))
+                s.value().split(' ').find_map(|v| {
+                    if v == "with_prefix" {
+                        None
+                    } else {
+                        Some(syn::parse(v.parse().unwrap()).expect("invalid visibility found"))
+                    }
+                })
             } else {
                 None
             }
@@ -119,8 +122,8 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
         .or_else(|| params.global_attr.clone());
 
     let visibility = parse_visibility(attr.as_ref(), params.attribute_name);
-    match attr {
-        Some(_) => match mode {
+    if attr.is_some() {
+        match mode {
             GenMode::Get => {
                 quote! {
                     #(#doc)*
@@ -158,8 +161,9 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                     }
                 }
             }
-        },
+        }
+    } else {
         // Don't need to do anything.
-        None => quote! {},
+        quote! {}
     }
 }
