@@ -121,7 +121,6 @@ mod submodule {
             let val = Plain::default();
             assert_eq!(19, val.get_private_prefixed());
         }
-
     }
 }
 
