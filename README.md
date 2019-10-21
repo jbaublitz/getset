@@ -1,7 +1,7 @@
 # getset
 
 [![Build Status](https://travis-ci.org/Hoverbear/getset.svg?branch=master)](https://travis-ci.org/Hoverbear/getset)
-[![Docs](https://docs.rs/mio/badge.svg)](https://docs.rs/getset/)
+[![Docs](https://docs.rs/getset/badge.svg)](https://docs.rs/getset/)
 
 Getset, we're ready to go!
 
@@ -165,7 +165,7 @@ fn main() {
 ```
 
 For some purposes, it's useful to have the `get_` prefix on the getters for
-either legacy of compatability reasons. It is done with `get-prefix`.
+either legacy of compatability reasons. It is done with `with_prefix`.
 
 ```rust
 #[macro_use]
