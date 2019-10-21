@@ -21,8 +21,9 @@ jobs:
       - uses: actions-rs/grcov@v0.1
         with:
           output-type: lcov
+          output-file: ./coverage/lcov.info
       - name: Coveralls upload
         uses: coverallsapp/github-action@master
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          path-to-lcov: ${{ steps.Coverage.outputs.report }}
+          path-to-lcov: ./coverage/lcov.info
