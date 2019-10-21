@@ -1,6 +1,5 @@
 # getset
 
-[![Build Status](https://travis-ci.org/Hoverbear/getset.svg?branch=master)](https://travis-ci.org/Hoverbear/getset)
 [![Docs](https://docs.rs/getset/badge.svg)](https://docs.rs/getset/)
 
 Getset, we're ready to go!
