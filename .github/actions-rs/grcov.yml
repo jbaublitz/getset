@@ -1,2 +1,2 @@
 output-type: lcov
-output-file: ./coverage/lcov.info
+output-file: /tmp/lcov.info
