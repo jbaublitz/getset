@@ -48,6 +48,7 @@ where
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
+    #[must_use]
     fn private(&self) -> &T {
         &self.private
     }
@@ -78,12 +79,14 @@ where
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
+    #[must_use]
     fn private_mut(&mut self) -> &mut T {
         &mut self.private
     }
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
+    #[must_use]
     pub fn public_mut(&mut self) -> &mut T {
         &mut self.public
     }
@@ -95,6 +98,7 @@ where
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
+    #[must_use]
     pub fn public(&self) -> T {
         self.public
     }
