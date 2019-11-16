@@ -1,6 +1,6 @@
 # getset
 
-[![Downloads](https://img.shields.io/crates/d/getset)](https://crates.io/crates/getset)
+[![Download](https://img.shields.io/crates/d/getset)](https://crates.io/crates/getset)
 [![License](https://img.shields.io/crates/l/getset)](https://github.com/Hoverbear/getset/blob/master/LICENSE)
 [![Docs](https://docs.rs/getset/badge.svg)](https://docs.rs/getset/)
 [![Coverage Status](https://coveralls.io/repos/github/Hoverbear/getset/badge.svg)](https://coveralls.io/github/Hoverbear/getset)
