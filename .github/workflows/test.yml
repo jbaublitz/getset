@@ -1,0 +1,64 @@
+name: Test
+
+on:
+  push:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'src/**'
+      - 'tests/**'
+      - '.github/**'
+  pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'src/**'
+      - 'tests/**'
+      - '.github/**'
+
+jobs:
+  Mac:
+    runs-on: macOS-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
+
+  Windows:
+    runs-on: windows-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
+
+  Ubuntu:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+    - name: Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
+
