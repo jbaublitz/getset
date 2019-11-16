@@ -101,19 +101,19 @@ mod submodule {
         #[test]
         fn test_plain() {
             let val = Plain::default();
-            val.private_accessible();
+            let _ = val.private_accessible();
         }
 
         #[test]
         fn test_generic() {
             let val = Generic::<usize>::default();
-            val.private_accessible();
+            let _ = val.private_accessible();
         }
 
         #[test]
         fn test_where() {
             let val = Where::<usize>::default();
-            val.private_accessible();
+            let _ = val.private_accessible();
         }
 
         #[test]

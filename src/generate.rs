@@ -125,6 +125,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                 quote! {
                     #(#doc)*
                     #[inline(always)]
+                    #[must_use]
                     #visibility fn #fn_name(&self) -> &#ty {
                         &self.#field_name
                     }
@@ -134,6 +135,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                 quote! {
                     #(#doc)*
                     #[inline(always)]
+                    #[must_use]
                     #visibility fn #fn_name(&self) -> #ty {
                         self.#field_name
                     }
@@ -153,6 +155,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
                 quote! {
                     #(#doc)*
                     #[inline(always)]
+                    #[must_use]
                     #visibility fn #fn_name(&mut self) -> &mut #ty {
                         &mut self.#field_name
                     }
