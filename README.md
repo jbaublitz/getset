@@ -44,33 +44,9 @@ fn main() {
 }
 ```
 
-The above structure definition generates the following output with `cargo expand`.
+You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
 
 ```rust
-#![feature(prelude_import)]
-#![no_std]
-#[prelude_import]
-use ::std::prelude::v1::*;
-#[macro_use]
-extern crate std as std;
-use getset::{Getters, MutGetters, CopyGetters, Setters};
-pub struct Foo<T>
-where
-    T: Copy + Clone + Default,
-{
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[get]
-    #[set]
-    #[get_mut]
-    private: T,
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[get_copy = "pub"]
-    #[set = "pub"]
-    #[get_mut = "pub"]
-    public: T,
-}
 impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
@@ -80,12 +56,6 @@ where
     #[inline(always)]
     fn private(&self) -> &T {
         &self.private
-    }
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[inline(always)]
-    pub fn public(&self) -> T {
-        self.public
     }
 }
 impl<T> Foo<T>
@@ -124,18 +94,15 @@ where
         &mut self.public
     }
 }
-#[automatically_derived]
-#[allow(unused_qualifications)]
-impl<T: ::core::default::Default> ::core::default::Default for Foo<T>
+impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    #[inline]
-    fn default() -> Foo<T> {
-        Foo {
-            private: ::core::default::Default::default(),
-            public: ::core::default::Default::default(),
-        }
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    pub fn public(&self) -> T {
+        self.public
     }
 }
 ```
