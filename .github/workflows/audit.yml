@@ -7,7 +7,16 @@ on:
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
+      - 'src/**'
+      - 'tests/**'
+      - '.github/**'
   pull_request:
+    paths:
+      - '**/Cargo.toml'
+      - '**/Cargo.lock'
+      - 'src/**'
+      - 'tests/**'
+      - '.github/**'
 
 jobs:
   Audit:
