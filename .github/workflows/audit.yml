@@ -4,19 +4,6 @@ on:
   schedule:
     - cron: '0 0 * * *'
   push:
-    paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - 'src/**'
-      - 'tests/**'
-      - '.github/**'
-  pull_request:
-    paths:
-      - '**/Cargo.toml'
-      - '**/Cargo.lock'
-      - 'src/**'
-      - 'tests/**'
-      - '.github/**'
 
 jobs:
   Audit:
