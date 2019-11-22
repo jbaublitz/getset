@@ -15,16 +15,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
-    - name: Cache cargo registry
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/registry
-        key: ${{ matrix.os }}-${{ matrix.rust }}-test-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-    - name: Cache cargo index
-      uses: actions/cache@v1
-      with:
-        path: ~/.cargo/git
-        key: ${{ matrix.os }}-${{ matrix.rust }}-test-cargo-index-${{ hashFiles('**/Cargo.toml') }}
     - name: Cache target
       id: cache-target
       uses: actions/cache@v1
@@ -45,16 +35,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-clippy-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-      - name: Cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-clippy-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
@@ -74,16 +54,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-format-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-      - name: Cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-format-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
@@ -104,16 +74,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache cargo registry
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/registry
-          key: ${{ runner.os }}-coverage-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
-      - name: Cache cargo index
-        uses: actions/cache@v1
-        with:
-          path: ~/.cargo/git
-          key: ${{ runner.os }}-coverage-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
