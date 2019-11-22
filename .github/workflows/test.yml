@@ -9,8 +9,9 @@ env:
 jobs:
   test:
     strategy:
-      os: [macos-latest, windows-latest, ubuntu-latest]
-      rust: [stable, nightly]
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        rust: [stable, nightly]
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
@@ -19,23 +20,23 @@ jobs:
       uses: actions/cache@v1
       with:
         path: ~/.rustup
-        key: ${{ matrix.os }}-${{ matrix.rust }}-rustup
+        key: ${{ matrix.os }}-${{ matrix.rust }}-test-rustup
     - name: Cache cargo registry
       uses: actions/cache@v1
       with:
         path: ~/.cargo/registry
-        key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+        key: ${{ matrix.os }}-${{ matrix.rust }}-test-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
     - name: Cache cargo index
       uses: actions/cache@v1
       with:
         path: ~/.cargo/git
-        key: ${{ matrix.os }}-${{ matrix.rust }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+        key: ${{ matrix.os }}-${{ matrix.rust }}-test-cargo-index-${{ hashFiles('**/Cargo.toml') }}
     - name: Cache target
       id: cache-target
       uses: actions/cache@v1
       with:
         path: target
-        key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.toml') }}
+        key: ${{ runner.os }}-${{ matrix.rust }}-test-target-${{ hashFiles('**/Cargo.toml') }}
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
@@ -55,23 +56,23 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.rustup
-          key: ${{ runner.os }}-rustup
+          key: ${{ runner.os }}-clippy-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-clippy-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache cargo index
         uses: actions/cache@v1
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-clippy-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
         with:
           path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-clippy-target-${{ hashFiles('**/Cargo.toml') }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -90,23 +91,23 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.rustup
-          key: ${{ runner.os }}-rustup
+          key: ${{ runner.os }}-format-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-format-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache cargo index
         uses: actions/cache@v1
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-format-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
         with:
           path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-format-target-${{ hashFiles('**/Cargo.toml') }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -126,23 +127,23 @@ jobs:
         uses: actions/cache@v1
         with:
           path: ~/.rustup
-          key: ${{ runner.os }}-rustup
+          key: ${{ runner.os }}-coverage-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
           path: ~/.cargo/registry
-          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-coverage-cargo-registry-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache cargo index
         uses: actions/cache@v1
         with:
           path: ~/.cargo/git
-          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-coverage-cargo-index-${{ hashFiles('**/Cargo.toml') }}
       - name: Cache target
         id: cache-target
         uses: actions/cache@v1
         with:
           path: target
-          key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.toml') }}
+          key: ${{ runner.os }}-coverage-target-${{ hashFiles('**/Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
