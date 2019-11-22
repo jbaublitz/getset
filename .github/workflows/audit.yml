@@ -1,4 +1,4 @@
-name: Audit
+name: audit
 
 on:
   schedule:
@@ -10,12 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache .rustup
-        id: cache-rustup
-        uses: actions/cache@v1
-        with:
-          path: ~/.rustup
-          key: ${{ runner.os }}--audit-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:

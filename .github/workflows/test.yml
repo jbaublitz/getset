@@ -15,12 +15,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v1
-    - name: Cache .rustup
-      id: cache-rustup
-      uses: actions/cache@v1
-      with:
-        path: ~/.rustup
-        key: ${{ matrix.os }}-${{ matrix.rust }}-test-rustup
     - name: Cache cargo registry
       uses: actions/cache@v1
       with:
@@ -51,12 +45,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache .rustup
-        id: cache-rustup
-        uses: actions/cache@v1
-        with:
-          path: ~/.rustup
-          key: ${{ runner.os }}-clippy-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -86,12 +74,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache .rustup
-        id: cache-rustup
-        uses: actions/cache@v1
-        with:
-          path: ~/.rustup
-          key: ${{ runner.os }}-format-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
@@ -122,12 +104,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
-      - name: Cache .rustup
-        id: cache-rustup
-        uses: actions/cache@v1
-        with:
-          path: ~/.rustup
-          key: ${{ runner.os }}-coverage-rustup
       - name: Cache cargo registry
         uses: actions/cache@v1
         with:
