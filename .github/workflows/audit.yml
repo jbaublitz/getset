@@ -6,8 +6,8 @@ on:
   push:
 
 jobs:
-  Audit:
-    runs-on: windows-latest
+  audit:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
       - uses: actions-rs/audit-check@v1

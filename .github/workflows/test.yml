@@ -3,8 +3,11 @@ name: Test
 on:
   push:
 
+env:
+  RUSTFLAGS: "--deny=warnings"
+
 jobs:
-  Mac:
+  mac:
     runs-on: macos-latest
     steps:
     - name: Checkout
@@ -19,7 +22,7 @@ jobs:
         command: test
         args: -- --nocapture
 
-  Windows:
+  windows:
     runs-on: windows-latest
     steps:
     - name: Checkout
@@ -34,7 +37,7 @@ jobs:
         command: test
         args: -- --nocapture
 
-  Ubuntu:
+  ubuntu-stable:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -48,8 +51,38 @@ jobs:
       with:
         command: test
         args: -- --nocapture
+  
+  ubuntu-beta:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: beta
+    - name: Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
 
-  Clippy:
+  ubuntu-nightly:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v1
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+    - name: Test
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: -- --nocapture
+
+  clippy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -63,7 +96,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  Format:
+  format:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -78,7 +111,7 @@ jobs:
           command: fmt
           args: -- --check
 
-  Coverage:
+  coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
