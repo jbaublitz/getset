@@ -10,6 +10,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache .rustup
+        id: cache-rustup
+        uses: actions/cache@v1
+        with:
+          path: /home/runner/.rustup
+          key: ${{job.id}}-rustup
+      - name: Cache target
+        id: cache-target
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{job.id}}-target
       - uses: actions-rs/audit-check@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
