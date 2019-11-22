@@ -1,4 +1,4 @@
-name: Test
+name: test
 
 on:
   push:
@@ -40,7 +40,7 @@ jobs:
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: ${{ matrix.rust }}
     - name: Test
       uses: actions-rs/cargo@v1
       with:
