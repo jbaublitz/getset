@@ -53,8 +53,9 @@ fn has_prefix_attr(f: &Field) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter_map(|v| {
-            let meta = v.parse_meta().expect("Could not get attribute");
+        .filter_map(|v| v.parse_meta().ok())
+        .filter_map(|meta| {
+            let meta = ;
             if ["get", "get_copy"]
                 .iter()
                 .any(|ident| meta.path().is_ident(ident))
@@ -104,8 +105,8 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
     let attr = field
         .attrs
         .iter()
-        .filter_map(|v| {
-            let meta = v.parse_meta().expect("attribute");
+        .filter_map(|v| v.parse_meta().ok())
+        .filter_map(|meta| {
             if meta.path().is_ident("doc") {
                 doc.push(v);
                 None
