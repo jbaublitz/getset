@@ -1,16 +1,17 @@
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use proc_macro_error::abort;
+use proc_macro_error::{abort, ResultExt};
 use syn::{self, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
 
+use self::GenMode::*;
+use super::parse_attr;
+
 pub struct GenParams {
-    pub attribute_name: &'static str,
-    pub fn_name_prefix: &'static str,
-    pub fn_name_suffix: &'static str,
+    pub mode: GenMode,
     pub global_attr: Option<Meta>,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Copy, Clone)]
 pub enum GenMode {
     Get,
     GetCopy,
@@ -19,7 +20,30 @@ pub enum GenMode {
 }
 
 impl GenMode {
-    fn is_get(&self) -> bool {
+    pub fn name(self) -> &'static str {
+        match self {
+            Get => "get",
+            GetCopy => "get_copy",
+            Set => "set",
+            GetMut => "get_mut",
+        }
+    }
+
+    pub fn prefix(self) -> &'static str {
+        match self {
+            Get | GetCopy | GetMut => "",
+            Set => "set_",
+        }
+    }
+
+    pub fn suffix(self) -> &'static str {
+        match self {
+            Get | GetCopy | Set => "",
+            GetMut => "_mut",
+        }
+    }
+
+    fn is_get(self) -> bool {
         match self {
             GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
             GenMode::Set => false,
@@ -38,7 +62,8 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
             if path.is_ident(meta_name) {
                 s.value().split(' ').find(|v| *v != "with_prefix").map(|v| {
                     syn::parse_str(v)
-                        .unwrap_or_else(|_| abort!(s.span(), "invalid visibility found"))
+                        .map_err(|e| syn::Error::new(s.span(), e))
+                        .expect_or_abort("invalid visibility found")
                 })
             } else {
                 None
@@ -50,11 +75,11 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
 
 /// Some users want legacy/compatability.
 /// (Getters are often prefixed with `get_`)
-fn has_prefix_attr(f: &Field) -> bool {
+fn has_prefix_attr(f: &Field, mode: GenMode) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter_map(|v| v.parse_meta().ok())
+        .filter_map(|v| parse_attr(v, mode))
         .filter(|meta| {
             ["get", "get_copy"]
                 .iter()
@@ -74,7 +99,7 @@ fn has_prefix_attr(f: &Field) -> bool {
     }
 }
 
-pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStream2 {
+pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
     let field_name = field
         .clone()
         .ident
@@ -83,40 +108,35 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
     let fn_name = Ident::new(
         &format!(
             "{}{}{}{}",
-            if has_prefix_attr(field) && (mode.is_get()) {
+            if has_prefix_attr(field, params.mode) && (params.mode.is_get()) {
                 "get_"
             } else {
                 ""
             },
-            params.fn_name_prefix,
+            params.mode.prefix(),
             field_name,
-            params.fn_name_suffix
+            params.mode.suffix()
         ),
         Span::call_site(),
     );
     let ty = field.ty.clone();
 
-    let mut doc = Vec::new();
+    let doc = field.attrs.iter().filter(|v| {
+        v.parse_meta()
+            .map(|meta| meta.path().is_ident("doc"))
+            .unwrap_or(false)
+    });
+
     let attr = field
         .attrs
         .iter()
-        .filter_map(|v| v.parse_meta().ok().map(|meta| (v, meta)))
-        .filter_map(|(v, meta)| {
-            if meta.path().is_ident("doc") {
-                doc.push(v);
-                None
-            } else if meta.path().is_ident(params.attribute_name) {
-                Some(meta)
-            } else {
-                None
-            }
-        })
+        .filter_map(|v| parse_attr(v, params.mode))
         .last()
         .or_else(|| params.global_attr.clone());
 
-    let visibility = parse_visibility(attr.as_ref(), params.attribute_name);
+    let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
-        Some(_) => match mode {
+        Some(_) => match params.mode {
             GenMode::Get => {
                 quote! {
                     #(#doc)*
