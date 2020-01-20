@@ -148,8 +148,8 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
+use proc_macro_error::{abort_call_site, proc_macro_error, ResultExt};
 use syn::{DataStruct, DeriveInput, Meta};
-use proc_macro_error::{proc_macro_error, abort_call_site, ResultExt};
 
 mod generate;
 use crate::generate::{GenMode, GenParams};
