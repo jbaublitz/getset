@@ -30,12 +30,10 @@ where
     public: T,
 }
 
-fn main() {
-    let mut foo = Foo::default();
-    foo.set_private(1);
-    (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
-}
+let mut foo = Foo::default();
+foo.set_private(1);
+(*foo.private_mut()) += 1;
+assert_eq!(*foo.private(), 2);
 ```
 
 You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
@@ -105,10 +103,8 @@ Attributes can be set on struct level for all fields in struct as well. Field le
 precedence.
 
 ```rust
-#[macro_use]
-extern crate getset;
-
 mod submodule {
+    use getset::{Getters, MutGetters, CopyGetters, Setters};
     #[derive(Getters, CopyGetters, Default)]
     #[get_copy = "pub"] // By default add a pub getting for all fields.
     pub struct Foo {
@@ -131,8 +127,7 @@ For some purposes, it's useful to have the `get_` prefix on the getters for
 either legacy of compatability reasons. It is done with `with_prefix`.
 
 ```rust
-#[macro_use]
-extern crate getset;
+use getset::{Getters, MutGetters, CopyGetters, Setters};
 
 #[derive(Getters, Default)]
 pub struct Foo {
@@ -140,10 +135,9 @@ pub struct Foo {
     field: bool,
 }
 
-fn main() {
-    let mut foo = Foo::default();
-    let val = foo.get_field();
-}
+
+let mut foo = Foo::default();
+let val = foo.get_field();
 ```
 */
 
