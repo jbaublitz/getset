@@ -1,7 +1,6 @@
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use syn::{self, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
-use proc_macro_error::{ResultExt, abort};
+use syn::{self, Field, Lit, Meta, MetaNameValue, Visibility};
 
 pub struct GenParams {
     pub attribute_name: &'static str,
@@ -39,10 +38,7 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
                 s.value()
                     .split(' ')
                     .find(|v| *v != "with_prefix")
-                    .map(|v| {
-                        syn::parse_str(v)
-                            .unwrap_or_else(|_| abort!(s.span(), "invalid visibility found"))
-                    })
+                    .map(|v| syn::parse(v.parse().unwrap()).expect("invalid visibility found"))
             } else {
                 None
             }
@@ -87,7 +83,7 @@ pub fn implement(field: &Field, mode: &GenMode, params: &GenParams) -> TokenStre
     let field_name = field
         .clone()
         .ident
-        .unwrap_or_else(|| abort!(field.span(), "Expected the field to have a name"));
+        .expect("Expected the field to have a name");
 
     let fn_name = Ident::new(
         &format!(
