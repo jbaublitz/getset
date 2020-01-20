@@ -1,60 +1,47 @@
-name: Test
+name: test
 
 on:
   push:
   pull_request:
 
+env:
+  RUSTFLAGS: "--deny=warnings"
+
 jobs:
-  Mac:
-    runs-on: macos-latest
+  test:
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+        rust: [stable, nightly]
+    runs-on: ${{ matrix.os }}
     steps:
-    - name: Checkout
-      uses: actions/checkout@v1
+    - uses: actions/checkout@v1
+    - name: Cache target
+      id: cache-target
+      uses: actions/cache@v1
+      with:
+        path: target
+        key: ${{ runner.os }}-${{ matrix.rust }}-test-target-${{ hashFiles('**/Cargo.toml') }}
     - name: Install Rust toolchain
       uses: actions-rs/toolchain@v1
       with:
-        toolchain: stable
+        toolchain: ${{ matrix.rust }}
     - name: Test
       uses: actions-rs/cargo@v1
       with:
         command: test
         args: -- --nocapture
 
-  Windows:
-    runs-on: windows-latest
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v1
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: Test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: -- --nocapture
-
-  Ubuntu:
+  clippy:
     runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-      uses: actions/checkout@v1
-    - name: Install Rust toolchain
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-    - name: Test
-      uses: actions-rs/cargo@v1
-      with:
-        command: test
-        args: -- --nocapture
-
-  Clippy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v1
+      - name: Cache target
+        id: cache-target
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-clippy-target-${{ hashFiles('**/Cargo.toml') }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -64,11 +51,16 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
-  Format:
+  format:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v1
+      - uses: actions/checkout@v1
+      - name: Cache target
+        id: cache-target
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-format-target-${{ hashFiles('**/Cargo.toml') }}
       - name: Install Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -79,10 +71,16 @@ jobs:
           command: fmt
           args: -- --check
 
-  Coverage:
+  coverage:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v1
+      - name: Cache target
+        id: cache-target
+        uses: actions/cache@v1
+        with:
+          path: target
+          key: ${{ runner.os }}-coverage-target-${{ hashFiles('**/Cargo.toml') }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: nightly
