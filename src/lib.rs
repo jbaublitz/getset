@@ -117,10 +117,9 @@ mod submodule {
         foo.private();
     }
 }
-fn main() {
-    let mut foo = submodule::Foo::default();
-    foo.public();
-}
+
+let mut foo = submodule::Foo::default();
+foo.public();
 ```
 
 For some purposes, it's useful to have the `get_` prefix on the getters for
