@@ -234,14 +234,8 @@ pub fn setters(input: TokenStream) -> TokenStream {
 fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<Meta> {
     attrs
         .iter()
-        .filter_map(|v| {
-            let meta = v.parse_meta().expect("attribute");
-            if meta.path().is_ident(attribute_name) {
-                Some(meta)
-            } else {
-                None
-            }
-        })
+        .filter_map(|v| v.parse_meta().ok()) // non "meta" attributes are not our concern
+        .filter(|meta| meta.path().is_ident(attribute_name))
         .last()
 }
 
