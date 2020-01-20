@@ -149,14 +149,16 @@ extern crate proc_macro2;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use syn::{DataStruct, DeriveInput, Meta};
+use proc_macro_error::{proc_macro_error, abort_call_site, ResultExt};
 
 mod generate;
 use crate::generate::{GenMode, GenParams};
 
 #[proc_macro_derive(Getters, attributes(get, with_prefix))]
+#[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
         attribute_name: "get",
         fn_name_prefix: "",
@@ -172,9 +174,10 @@ pub fn getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix))]
+#[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
         attribute_name: "get_copy",
         fn_name_prefix: "",
@@ -190,9 +193,10 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(MutGetters, attributes(get_mut))]
+#[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for getters");
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
         attribute_name: "get_mut",
         fn_name_prefix: "",
@@ -207,9 +211,10 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(Setters, attributes(set))]
+#[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
     // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect("Couldn't parse for setters");
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for setters");
     let params = GenParams {
         attribute_name: "set",
         fn_name_prefix: "set_",
@@ -257,6 +262,6 @@ fn produce(ast: &DeriveInput, mode: &GenMode, params: &GenParams) -> TokenStream
         }
     } else {
         // Nope. This is an Enum. We cannot handle these!
-        panic!("#[derive(Getters)] is only defined for structs, not for enums!");
+        abort_call_site!("#[derive(Getters)] is only defined for structs, not for enums!");
     }
 }
