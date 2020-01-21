@@ -148,106 +148,119 @@ extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use proc_macro_error::{abort_call_site, proc_macro_error, ResultExt};
-use syn::{DataStruct, DeriveInput, Meta};
+use proc_macro_error::{abort, abort_call_site, proc_macro_error, ResultExt};
+use syn::{spanned::Spanned, DataStruct, DeriveInput, Meta};
 
 mod generate;
 use crate::generate::{GenMode, GenParams};
 
-#[proc_macro_derive(Getters, attributes(get, with_prefix))]
+#[proc_macro_derive(Getters, attributes(get, with_prefix, getset))]
 #[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
-        attribute_name: "get",
-        fn_name_prefix: "",
-        fn_name_suffix: "",
-        global_attr: parse_global_attr(&ast.attrs, "get"),
+        mode: GenMode::Get,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::Get),
     };
 
     // Build the impl
-    let gen = produce(&ast, &GenMode::Get, &params);
+    let gen = produce(&ast, &params);
 
     // Return the generated impl
     gen.into()
 }
 
-#[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix))]
+#[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix, getset))]
 #[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
-        attribute_name: "get_copy",
-        fn_name_prefix: "",
-        fn_name_suffix: "",
-        global_attr: parse_global_attr(&ast.attrs, "get_copy"),
+        mode: GenMode::GetCopy,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetCopy),
     };
 
     // Build the impl
-    let gen = produce(&ast, &GenMode::GetCopy, &params);
+    let gen = produce(&ast, &params);
 
     // Return the generated impl
     gen.into()
 }
 
-#[proc_macro_derive(MutGetters, attributes(get_mut))]
+#[proc_macro_derive(MutGetters, attributes(get_mut, getset))]
 #[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
     let params = GenParams {
-        attribute_name: "get_mut",
-        fn_name_prefix: "",
-        fn_name_suffix: "_mut",
-        global_attr: parse_global_attr(&ast.attrs, "get_mut"),
+        mode: GenMode::GetMut,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetMut),
     };
 
     // Build the impl
-    let gen = produce(&ast, &GenMode::GetMut, &params);
+    let gen = produce(&ast, &params);
     // Return the generated impl
     gen.into()
 }
 
-#[proc_macro_derive(Setters, attributes(set))]
+#[proc_macro_derive(Setters, attributes(set, getset))]
 #[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
     // Parse the string representation
     let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for setters");
     let params = GenParams {
-        attribute_name: "set",
-        fn_name_prefix: "set_",
-        fn_name_suffix: "",
-        global_attr: parse_global_attr(&ast.attrs, "set"),
+        mode: GenMode::Set,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::Set),
     };
 
     // Build the impl
-    let gen = produce(&ast, &GenMode::Set, &params);
+    let gen = produce(&ast, &params);
 
     // Return the generated impl
     gen.into()
 }
 
-fn parse_global_attr(attrs: &[syn::Attribute], attribute_name: &str) -> Option<Meta> {
+fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
     attrs
         .iter()
-        .filter_map(|v| v.parse_meta().ok()) // non "meta" attributes are not our concern
-        .filter(|meta| meta.path().is_ident(attribute_name))
+        .filter_map(|v| parse_attr(v, mode)) // non "meta" attributes are not our concern
         .last()
 }
 
-fn produce(ast: &DeriveInput, mode: &GenMode, params: &GenParams) -> TokenStream2 {
+fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
+    use syn::{punctuated::Punctuated, Token};
+
+    if attr.path.is_ident("getset") {
+        attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+            .unwrap_or_abort()
+            .into_iter()
+            .inspect(|meta| {
+                if !(meta.path().is_ident("get")
+                    || meta.path().is_ident("get_copy")
+                    || meta.path().is_ident("get_mut")
+                    || meta.path().is_ident("set"))
+                {
+                    abort!(meta.path().span(), "unknown setter or getter")
+                }
+            })
+            .filter(|meta| meta.path().is_ident(mode.name()))
+            .last()
+    } else {
+        attr.parse_meta()
+            .ok()
+            .filter(|meta| meta.path().is_ident(mode.name()))
+    }
+}
+
+fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
     if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
-        let generated = fields
-            .iter()
-            .map(|f| generate::implement(f, mode, params))
-            .collect::<Vec<_>>();
+        let generated = fields.iter().map(|f| generate::implement(f, params));
 
         quote! {
             impl #impl_generics #name #ty_generics #where_clause {
