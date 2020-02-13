@@ -7,16 +7,12 @@ where
 {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get]
-    #[set]
-    #[get_mut]
+    #[getset(get, set, get_mut)]
     private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get_copy = "pub"]
-    #[set = "pub"]
-    #[get_mut = "pub"]
+    #[getset(get_copy = "pub", set = "pub", get_mut = "pub")]
     public: T,
 }
 
