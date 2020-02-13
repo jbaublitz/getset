@@ -8,7 +8,7 @@ Getters are generated as `fn field(&self) -> &type`, while setters are generated
 These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
 
 ```rust
-use getset::{Getters, MutGetters, CopyGetters, Setters};
+use getset::{CopyGetters, Getters, MutGetters, Setters};
 
 #[derive(Getters, Setters, MutGetters, CopyGetters, Default)]
 pub struct Foo<T>
@@ -17,16 +17,12 @@ where
 {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get]
-    #[set]
-    #[get_mut]
+    #[getset(get, set, get_mut)]
     private: T,
 
     /// Doc comments are supported!
     /// Multiline, even.
-    #[get_copy = "pub"]
-    #[set = "pub"]
-    #[get_mut = "pub"]
+    #[getset(get_copy = "pub", set = "pub", get_mut = "pub")]
     public: T,
 }
 
@@ -39,6 +35,20 @@ assert_eq!(*foo.private(), 2);
 You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
 
 ```rust,ignore
+use getset::{Getters, MutGetters, CopyGetters, Setters};
+pub struct Foo<T>
+where
+    T: Copy + Clone + Default,
+{
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[getset(get, get, get_mut)]
+    private: T,
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[getset(get_copy = "pub", set = "pub", get_mut = "pub")]
+    public: T,
+}
 impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
@@ -54,13 +64,6 @@ impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[inline(always)]
-    fn set_private(&mut self, val: T) -> &mut Self {
-        self.private = val;
-        self
-    }
     /// Doc comments are supported!
     /// Multiline, even.
     #[inline(always)]
@@ -106,10 +109,10 @@ precedence.
 mod submodule {
     use getset::{Getters, MutGetters, CopyGetters, Setters};
     #[derive(Getters, CopyGetters, Default)]
-    #[get_copy = "pub"] // By default add a pub getting for all fields.
+    #[getset(get_copy = "pub")] // By default add a pub getting for all fields.
     pub struct Foo {
         public: i32,
-        #[get_copy] // Override as private
+        #[getset(get_copy)] // Override as private
         private: i32,
     }
     fn demo() {
@@ -130,7 +133,7 @@ use getset::{Getters, MutGetters, CopyGetters, Setters};
 
 #[derive(Getters, Default)]
 pub struct Foo {
-    #[get = "pub with_prefix"]
+    #[getset(get = "pub with_prefix")]
     field: bool,
 }
 
