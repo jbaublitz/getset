@@ -26,12 +26,10 @@ where
     public: T,
 }
 
-fn main() {
-    let mut foo = Foo::default();
-    foo.set_private(1);
-    (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
-}
+let mut foo = Foo::default();
+foo.set_private(1);
+(*foo.private_mut()) += 1;
+assert_eq!(*foo.private(), 2);
 ```
 
 You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
