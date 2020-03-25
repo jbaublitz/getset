@@ -25,4 +25,4 @@ proc-macro = true
 quote = "1"
 syn = "1"
 proc-macro2 = { version = "1", default-features = false }
-proc-macro-error = "0.4"
+proc-macro-error = "1.0"
