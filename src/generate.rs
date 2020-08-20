@@ -75,28 +75,35 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
 
 /// Some users want legacy/compatability.
 /// (Getters are often prefixed with `get_`)
-fn has_prefix_attr(f: &Field, mode: GenMode) -> bool {
+fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
     let inner = f
         .attrs
         .iter()
-        .filter_map(|v| parse_attr(v, mode))
+        .filter_map(|v| parse_attr(v, params.mode))
         .filter(|meta| {
             ["get", "get_copy"]
                 .iter()
                 .any(|ident| meta.path().is_ident(ident))
         })
         .last();
-    match inner {
-        Some(Meta::NameValue(meta)) => {
-            if let Lit::Str(lit) = meta.lit {
-                // Naive tokenization to avoid a possible visibility mod named `with_prefix`.
-                lit.value().split(' ').any(|v| v == "with_prefix")
-            } else {
-                false
+
+    // Check it the attr includes `with_prefix`
+    let wants_prefix = |possible_meta: &Option<Meta>| -> bool {
+        match possible_meta {
+            Some(Meta::NameValue(meta)) => {
+                if let Lit::Str(lit_str) = &meta.lit {
+                    // Naive tokenization to avoid a possible visibility mod named `with_prefix`.
+                    lit_str.value().split(' ').any(|v| v == "with_prefix")
+                } else {
+                    false
+                }
             }
+            _ => false,
         }
-        _ => false,
-    }
+    };
+
+    // `with_prefix` can either be on the local or global attr
+    wants_prefix(&inner) || wants_prefix(&params.global_attr)
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
@@ -108,7 +115,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
     let fn_name = Ident::new(
         &format!(
             "{}{}{}{}",
-            if has_prefix_attr(field, params.mode) && (params.mode.is_get()) {
+            if has_prefix_attr(field, params) && (params.mode.is_get()) {
                 "get_"
             } else {
                 ""
