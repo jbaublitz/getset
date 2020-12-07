@@ -1,7 +1,7 @@
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
 use proc_macro_error::{abort, ResultExt};
-use syn::{self, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
+use syn::{self, ext::IdentExt, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
 
 use self::GenMode::*;
 use super::parse_attr;
@@ -112,20 +112,28 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .ident
         .unwrap_or_else(|| abort!(field.span(), "Expected the field to have a name"));
 
-    let fn_name = Ident::new(
-        &format!(
-            "{}{}{}{}",
-            if has_prefix_attr(field, params) && (params.mode.is_get()) {
-                "get_"
-            } else {
-                ""
-            },
-            params.mode.prefix(),
-            field_name,
-            params.mode.suffix()
-        ),
-        Span::call_site(),
-    );
+    let fn_name = if !has_prefix_attr(field, params)
+        && (params.mode.is_get())
+        && params.mode.suffix().is_empty()
+        && field_name.to_string().starts_with("r#")
+    {
+        field_name.clone()
+    } else {
+        Ident::new(
+            &format!(
+                "{}{}{}{}",
+                if has_prefix_attr(field, params) && (params.mode.is_get()) {
+                    "get_"
+                } else {
+                    ""
+                },
+                params.mode.prefix(),
+                field_name.unraw(),
+                params.mode.suffix()
+            ),
+            Span::call_site(),
+        )
+    };
     let ty = field.ty.clone();
 
     let doc = field.attrs.iter().filter(|v| {
