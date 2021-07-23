@@ -151,6 +151,8 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
+        // Generate nothing for skipped field.
+        Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
             GenMode::Get => {
                 quote! {
