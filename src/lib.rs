@@ -235,7 +235,8 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
     use syn::{punctuated::Punctuated, Token};
 
     if attr.path.is_ident("getset") {
-        attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+        let (last, skip, mut collected) = attr
+            .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
             .unwrap_or_abort()
             .into_iter()
             .inspect(|meta| {
@@ -248,8 +249,38 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
                     abort!(meta.path().span(), "unknown setter or getter")
                 }
             })
-            .filter(|meta| meta.path().is_ident(mode.name()) || meta.path().is_ident("skip"))
-            .last()
+            .fold(
+                (None, None, Vec::new()),
+                |(last, skip, mut collected), meta| {
+                    if meta.path().is_ident(mode.name()) {
+                        (Some(meta), skip, collected)
+                    } else if meta.path().is_ident("skip") {
+                        (last, Some(meta), collected)
+                    } else {
+                        // Store inapplicable item for potential error message
+                        // if used with skip.
+                        collected.push(meta);
+                        (last, skip, collected)
+                    }
+                },
+            );
+
+        if skip.is_some() {
+            // Check if there is any setter or getter used with skip, which is
+            // forbidden.
+            if last.is_none() && collected.is_empty() {
+                skip
+            } else {
+                abort!(
+                    last.or(collected.pop()).unwrap().path().span(),
+                    "use of setters and getters with skip is invalid"
+                );
+            }
+        } else {
+            // If skip is not used, return the last occurrence of matching
+            // setter/getter, if there is any.
+            last
+        }
     } else {
         attr.parse_meta()
             .ok()
