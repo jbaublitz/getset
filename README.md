@@ -154,3 +154,35 @@ fn main() {
     let val = foo.get_field();
 }
 ```
+
+Skipping setters and getters generation for a field when struct level attribute is used
+is possible with `#[getset(skip)]`.
+
+```rust
+use getset::{CopyGetters, Setters};
+
+#[derive(CopyGetters, Setters)]
+#[getset(get_copy, set)]
+pub struct Foo {
+    // If the field was not skipped, the compiler would complain about moving
+    // a non-copyable type in copy getter.
+    #[getset(skip)]
+    skipped: String,
+
+    field1: usize,
+    field2: usize,
+}
+
+impl Foo {
+    // It is possible to write getters and setters manually,
+    // possibly with a custom logic.
+    fn skipped(&self) -> &str {
+        &self.skipped
+    }
+
+    fn set_skipped(&mut self, val: &str) -> &mut Self {
+        self.skipped = val.to_string();
+        self
+    }
+}
+```

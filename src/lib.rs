@@ -126,7 +126,7 @@ foo.public();
 ```
 
 For some purposes, it's useful to have the `get_` prefix on the getters for
-either legacy of compatability reasons. It is done with `with_prefix`.
+either legacy of compatibility reasons. It is done with `with_prefix`.
 
 ```rust
 use getset::{Getters, MutGetters, CopyGetters, Setters};
@@ -140,6 +140,38 @@ pub struct Foo {
 
 let mut foo = Foo::default();
 let val = foo.get_field();
+```
+
+Skipping setters and getters generation for a field when struct level attribute is used
+is possible with `#[getset(skip)]`.
+
+```rust
+use getset::{CopyGetters, Setters};
+
+#[derive(CopyGetters, Setters)]
+#[getset(get_copy, set)]
+pub struct Foo {
+    // If the field was not skipped, the compiler would complain about moving
+    // a non-copyable type in copy getter.
+    #[getset(skip)]
+    skipped: String,
+
+    field1: usize,
+    field2: usize,
+}
+
+impl Foo {
+    // It is possible to write getters and setters manually,
+    // possibly with a custom logic.
+    fn skipped(&self) -> &str {
+        &self.skipped
+    }
+
+    fn set_skipped(&mut self, val: &str) -> &mut Self {
+        self.skipped = val.to_string();
+        self
+    }
+}
 ```
 */
 
@@ -235,20 +267,52 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
     use syn::{punctuated::Punctuated, Token};
 
     if attr.path.is_ident("getset") {
-        attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+        let (last, skip, mut collected) = attr
+            .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
             .unwrap_or_abort()
             .into_iter()
             .inspect(|meta| {
                 if !(meta.path().is_ident("get")
                     || meta.path().is_ident("get_copy")
                     || meta.path().is_ident("get_mut")
-                    || meta.path().is_ident("set"))
+                    || meta.path().is_ident("set")
+                    || meta.path().is_ident("skip"))
                 {
                     abort!(meta.path().span(), "unknown setter or getter")
                 }
             })
-            .filter(|meta| meta.path().is_ident(mode.name()))
-            .last()
+            .fold(
+                (None, None, Vec::new()),
+                |(last, skip, mut collected), meta| {
+                    if meta.path().is_ident(mode.name()) {
+                        (Some(meta), skip, collected)
+                    } else if meta.path().is_ident("skip") {
+                        (last, Some(meta), collected)
+                    } else {
+                        // Store inapplicable item for potential error message
+                        // if used with skip.
+                        collected.push(meta);
+                        (last, skip, collected)
+                    }
+                },
+            );
+
+        if skip.is_some() {
+            // Check if there is any setter or getter used with skip, which is
+            // forbidden.
+            if last.is_none() && collected.is_empty() {
+                skip
+            } else {
+                abort!(
+                    last.or_else(|| collected.pop()).unwrap().path().span(),
+                    "use of setters and getters with skip is invalid"
+                );
+            }
+        } else {
+            // If skip is not used, return the last occurrence of matching
+            // setter/getter, if there is any.
+            last
+        }
     } else {
         attr.parse_meta()
             .ok()
