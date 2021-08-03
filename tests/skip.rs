@@ -10,7 +10,6 @@ pub struct Plain {
     non_copyable: String,
 
     copyable: usize,
-
     // Invalid use of skip -- compilation error.
     // #[getset(skip, get_copy)]
     // non_copyable2: String,

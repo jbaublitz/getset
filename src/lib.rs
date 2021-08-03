@@ -304,7 +304,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
                 skip
             } else {
                 abort!(
-                    last.or(collected.pop()).unwrap().path().span(),
+                    last.or_else(|| collected.pop()).unwrap().path().span(),
                     "use of setters and getters with skip is invalid"
                 );
             }
