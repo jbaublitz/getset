@@ -223,6 +223,23 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+#[proc_macro_derive(OptionGetters, attributes(get_option, with_prefix, getset))]
+#[proc_macro_error]
+pub fn option_getters(input: TokenStream) -> TokenStream {
+    // Parse the string representation
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
+    let params = GenParams {
+        mode: GenMode::GetOption,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetOption),
+    };
+
+    // Build the impl
+    let gen = produce(&ast, &params);
+
+    // Return the generated impl
+    gen.into()
+}
+
 #[proc_macro_derive(MutGetters, attributes(get_mut, getset))]
 #[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
@@ -274,6 +291,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
             .inspect(|meta| {
                 if !(meta.path().is_ident("get")
                     || meta.path().is_ident("get_copy")
+                    || meta.path().is_ident("get_option")
                     || meta.path().is_ident("get_mut")
                     || meta.path().is_ident("set")
                     || meta.path().is_ident("skip"))

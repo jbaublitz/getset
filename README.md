@@ -186,3 +186,32 @@ impl Foo {
     }
 }
 ```
+
+Getters that return `&Option<T>` can lead to boilerplate code, as they require 
+the user to pollute code with `.as_ref()` everywhere. This can be changed by using 
+the `get_option` attribute on struct or field level. 
+Note the following syntaxes are supported for Options: 
+- Option
+- std::option::Option
+- ::std::option::Option
+- core::option::Option
+- ::core::option::Option
+
+However own type aliases like `type Bar<T> = Option<T>` are not supported.
+
+```rust
+use getset::{OptionGetters};
+
+#[derive(OptionGetters)]
+#[getset(get_option)]
+pub struct Foo {
+    field: Option<usize>,
+}
+
+impl Foo {
+    #[inline(always)]
+    fn field(&self) -> Option<&usize> {
+        self.field.as_ref()
+    }
+}
+```
