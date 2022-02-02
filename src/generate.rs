@@ -119,7 +119,7 @@ fn extract_type_from_option(ty: &syn::Type) -> syn::Type {
             _ => None,
         }
     }
-    
+
     fn extract_option_segment(path: &Path) -> Option<&PathSegment> {
         let idents_of_path = path
             .segments
@@ -150,7 +150,10 @@ fn extract_type_from_option(ty: &syn::Type) -> syn::Type {
             GenericArgument::Type(ref ty) => Some(ty),
             ref arg => abort!(arg, "Inner type T of Option<T> could not be extracted"),
         })
-        .expect_or_abort(&format!("expected Option<T> because of get_option attribute, found {}", quote!(#ty)))
+        .expect_or_abort(&format!(
+            "expected Option<T> because of get_option attribute, found {}",
+            quote!(#ty)
+        ))
         .to_owned()
 }
 
@@ -183,12 +186,6 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         )
     };
 
-    // In case of an Option<T>, it is necessary to unwrap the inner type T of it.
-    let ty = match params.mode {
-        GenMode::GetOption => extract_type_from_option(&field.ty),
-        _ => field.ty.clone(),
-    };
-
     let doc = field.attrs.iter().filter(|v| {
         v.parse_meta()
             .map(|meta| meta.path().is_ident("doc"))
@@ -201,6 +198,17 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .filter_map(|v| parse_attr(v, params.mode))
         .last()
         .or_else(|| params.global_attr.clone());
+
+    // If attr == None there is nothing more to do.
+    if attr.is_none() {
+        return quote!();
+    }
+
+    // In case of an Option<T>, it is necessary to unwrap the inner type T of it.
+    let ty = match params.mode {
+        GenMode::GetOption => extract_type_from_option(&field.ty),
+        _ => field.ty.clone(),
+    };
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {

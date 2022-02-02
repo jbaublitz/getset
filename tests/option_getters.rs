@@ -2,7 +2,7 @@
 extern crate getset;
 
 use crate::submodule::other::{
-    Generic, OptionPath1, OptionPath2, OptionPath3, OptionPath4, Plain, Where,
+    Generic, Mixed, OptionPath1, OptionPath2, OptionPath3, OptionPath4, Plain, Where,
 };
 
 // For testing `pub(super)`
@@ -66,6 +66,23 @@ mod submodule {
             /// A doc comment.
             #[get_option = "pub"]
             public_accessible: Option<T>,
+        }
+
+        #[derive(Getters, OptionGetters)]
+        pub struct Mixed {
+            #[getset(get = "pub")]
+            field: usize,
+            #[getset(get_option = "pub")]
+            optional_field: Option<usize>,
+        }
+
+        impl Default for Mixed {
+            fn default() -> Self {
+                Self {
+                    field: 101,
+                    optional_field: Some(22),
+                }
+            }
         }
 
         #[derive(OptionGetters)]
@@ -155,6 +172,13 @@ mod submodule {
         }
 
         #[test]
+        fn test_mixed() {
+            let val = Mixed::default();
+            val.field();
+            val.optional_field();
+        }
+
+        #[test]
         fn test_prefixed_plain() {
             let val = Plain::default();
             assert_eq!(Some(&"19".to_string()), val.get_private_prefixed());
@@ -178,6 +202,13 @@ fn test_generic() {
 fn test_where() {
     let val = Where::<usize>::default();
     assert_eq!(None, val.public_accessible());
+}
+
+#[test]
+fn test_mixed() {
+    let val = Mixed::default();
+    assert_eq!(101, *val.field());
+    assert_eq!(Some(&22), val.optional_field());
 }
 
 #[test]
