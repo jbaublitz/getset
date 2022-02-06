@@ -187,7 +187,32 @@ use proc_macro_error::{abort, abort_call_site, proc_macro_error, ResultExt};
 use syn::{spanned::Spanned, DataStruct, DeriveInput, Meta};
 
 mod generate;
+mod impl_getset;
+
 use crate::generate::{GenMode, GenParams};
+
+#[proc_macro_derive(
+    GetSet,
+    attributes(get, get_copy, get_mut, get_option, set, with_prefix, getset)
+)]
+#[proc_macro_error]
+pub fn getset(input: TokenStream) -> TokenStream {
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse GetSet attributes");
+
+    let global_params = impl_getset::collect_attr(&ast.attrs);
+
+    if global_params.contains_key(&impl_getset::GetSetAttr::skip()) {
+        abort!(
+            &ast.attrs[0],
+            "skip attribute cannot be used as global struct attribute"
+        );
+    }
+
+    // Build the impl
+    let gen = impl_getset::produce(&ast, &global_params);
+    // Return the generated impl
+    gen.into()
+}
 
 #[proc_macro_derive(Getters, attributes(get, with_prefix, getset))]
 #[proc_macro_error]
