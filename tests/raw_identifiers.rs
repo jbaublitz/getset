@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate getset;
 
-#[derive(CopyGetters, Default, Getters, MutGetters, Setters)]
+#[derive(CopyGetters, Default, Getters, MutGetters, Setters, FluentSetters)]
 struct RawIdentifiers {
     #[get]
     r#type: usize,
@@ -15,6 +15,8 @@ struct RawIdentifiers {
     r#const: usize,
     #[get_copy = "with_prefix"]
     r#if: usize,
+    #[set_fluent]
+    r#else: usize,
     // Ensure having no gen mode doesn't break things.
     #[allow(dead_code)]
     r#loop: usize,
@@ -54,4 +56,10 @@ fn test_get_with_prefix() {
 fn test_get_copy_with_prefix() {
     let val = RawIdentifiers::default();
     let _ = val.get_if();
+}
+
+#[test]
+fn test_set_fluent() {
+    let mut val = RawIdentifiers::default();
+    let _ = val.set_else(42);
 }
