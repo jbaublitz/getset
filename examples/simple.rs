@@ -1,13 +1,13 @@
-use getset::{CopyGetters, Getters, MutGetters, Setters};
+use getset::{CopyGetters, Getters, MutGetters, Setters, Withers};
 
-#[derive(Getters, Setters, MutGetters, CopyGetters, Default)]
+#[derive(Getters, Setters, Withers, MutGetters, CopyGetters, Default)]
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
 {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[getset(get, set, get_mut)]
+    #[getset(get, set, with, get_mut)]
     private: T,
 
     /// Doc comments are supported!
@@ -19,6 +19,7 @@ where
 fn main() {
     let mut foo = Foo::default();
     foo.set_private(1);
+    foo = foo.with_private(2);
     (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
+    assert_eq!(*foo.private(), 3);
 }
