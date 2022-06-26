@@ -256,6 +256,23 @@ pub fn setters(input: TokenStream) -> TokenStream {
     gen.into()
 }
 
+#[proc_macro_derive(Withers, attributes(with, getset))]
+#[proc_macro_error]
+pub fn withers(input: TokenStream) -> TokenStream {
+    // Parse the string representation
+    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for setters");
+    let params = GenParams {
+        mode: GenMode::With,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::With),
+    };
+
+    // Build the impl
+    let gen = produce(&ast, &params);
+
+    // Return the generated impl
+    gen.into()
+}
+
 fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
     attrs
         .iter()
