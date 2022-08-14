@@ -50,7 +50,7 @@ where
 {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[getset(get, get, get_mut)]
+    #[getset(get, set, get_mut)]
     private: T,
     /// Doc comments are supported!
     /// Multiline, even.
