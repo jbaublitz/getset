@@ -1,7 +1,9 @@
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro2::{Ident, Span};
-use proc_macro_error::{abort, ResultExt};
-use syn::{self, ext::IdentExt, spanned::Spanned, Field, Lit, Meta, MetaNameValue, Visibility};
+use proc_macro_error::abort;
+use syn::{
+    self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
+};
 
 use self::GenMode::*;
 use super::parse_attr;
@@ -51,26 +53,42 @@ impl GenMode {
     }
 }
 
-pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
-    match attr {
-        // `#[get = "pub"]` or `#[set = "pub"]`
-        Some(Meta::NameValue(MetaNameValue {
-            lit: Lit::Str(ref s),
-            path,
-            ..
-        })) => {
-            if path.is_ident(meta_name) {
-                s.value().split(' ').find(|v| *v != "with_prefix").map(|v| {
-                    syn::parse_str(v)
-                        .map_err(|e| syn::Error::new(s.span(), e))
-                        .expect_or_abort("invalid visibility found")
-                })
-            } else {
-                None
-            }
+// Helper function to extract string from Expr
+fn expr_to_string(expr: &Expr) -> Option<String> {
+    if let Expr::Lit(expr_lit) = expr {
+        if let Lit::Str(s) = &expr_lit.lit {
+            Some(s.value())
+        } else {
+            None
         }
-        _ => None,
+    } else {
+        None
     }
+}
+
+// Helper function to parse visibility
+fn parse_vis_str(s: &str, span: proc_macro2::Span) -> Visibility {
+    match syn::parse_str(s) {
+        Ok(vis) => vis,
+        Err(e) => abort!(span, "Invalid visibility found: {}", e),
+    }
+}
+
+// Helper function to parse visibility attribute
+pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
+    let meta = attr?;
+    let Meta::NameValue(MetaNameValue { value, path, .. }) = meta else {
+        return None;
+    };
+
+    if !path.is_ident(meta_name) {
+        return None;
+    }
+
+    let value_str = expr_to_string(value)?;
+    let vis_str = value_str.split(' ').find(|v| *v != "with_prefix")?;
+
+    Some(parse_vis_str(vis_str, value.span()))
 }
 
 /// Some users want legacy/compatability.
@@ -87,13 +105,15 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         })
         .last();
 
-    // Check it the attr includes `with_prefix`
     let wants_prefix = |possible_meta: &Option<Meta>| -> bool {
         match possible_meta {
             Some(Meta::NameValue(meta)) => {
-                if let Lit::Str(lit_str) = &meta.lit {
-                    // Naive tokenization to avoid a possible visibility mod named `with_prefix`.
-                    lit_str.value().split(' ').any(|v| v == "with_prefix")
+                if let Expr::Lit(expr_lit) = &meta.value {
+                    if let Lit::Str(lit_str) = &expr_lit.lit {
+                        lit_str.value().split(' ').any(|v| v == "with_prefix")
+                    } else {
+                        false
+                    }
                 } else {
                     false
                 }
@@ -102,14 +122,13 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         }
     };
 
-    // `with_prefix` can either be on the local or global attr
     wants_prefix(&inner) || wants_prefix(&params.global_attr)
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
     let field_name = field
-        .clone()
         .ident
+        .clone()
         .unwrap_or_else(|| abort!(field.span(), "Expected the field to have a name"));
 
     let fn_name = if !has_prefix_attr(field, params)
@@ -136,11 +155,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
     };
     let ty = field.ty.clone();
 
-    let doc = field.attrs.iter().filter(|v| {
-        v.parse_meta()
-            .map(|meta| meta.path().is_ident("doc"))
-            .unwrap_or(false)
-    });
+    let doc = field.attrs.iter().filter(|v| v.meta.path().is_ident("doc"));
 
     let attr = field
         .attrs
@@ -151,7 +166,6 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
-        // Generate nothing for skipped field.
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
             GenMode::Get => {
@@ -192,7 +206,6 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 }
             }
         },
-        // Don't need to do anything.
         None => quote! {},
     }
 }
