@@ -91,38 +91,31 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
     Some(parse_vis_str(vis_str, value.span()))
 }
 
-/// Some users want legacy/compatability.
+/// Some users want legacy/compatibility.
 /// (Getters are often prefixed with `get_`)
 fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
-    let inner = f
-        .attrs
-        .iter()
-        .filter_map(|v| parse_attr(v, params.mode))
-        .filter(|meta| {
-            ["get", "get_copy"]
-                .iter()
-                .any(|ident| meta.path().is_ident(ident))
-        })
-        .last();
-
-    let wants_prefix = |possible_meta: &Option<Meta>| -> bool {
-        match possible_meta {
-            Some(Meta::NameValue(meta)) => {
-                if let Expr::Lit(expr_lit) = &meta.value {
-                    if let Lit::Str(lit_str) = &expr_lit.lit {
-                        lit_str.value().split(' ').any(|v| v == "with_prefix")
-                    } else {
-                        false
-                    }
-                } else {
-                    false
+    // helper function to check if meta has `with_prefix` attribute
+    let meta_has_prefix = |meta: &Meta| -> bool {
+        if let Meta::NameValue(name_value) = meta {
+            if let Expr::Lit(expr_lit) = &name_value.value {
+                if let Lit::Str(s) = &expr_lit.lit {
+                    return s.value().split_whitespace().any(|v| v == "with_prefix");
                 }
             }
-            _ => false,
         }
+        false
     };
 
-    wants_prefix(&inner) || wants_prefix(&params.global_attr)
+    let field_attr_has_prefix = f
+        .attrs
+        .iter()
+        .filter_map(|attr| parse_attr(attr, params.mode))
+        .find(|meta| meta.path().is_ident("get") || meta.path().is_ident("get_copy"))
+        .map_or(false, |meta| meta_has_prefix(&meta));
+
+    let global_attr_has_prefix = params.global_attr.as_ref().map_or(false, meta_has_prefix);
+
+    field_attr_has_prefix || global_attr_has_prefix
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
@@ -166,6 +159,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
+        // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
             GenMode::Get => {
