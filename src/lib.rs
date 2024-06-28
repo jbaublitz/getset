@@ -276,6 +276,8 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
             );
 
         if skip.is_some() {
+            // Check if there is any setter or getter used with skip, which is
+            // forbidden.
             if last.is_none() && collected.is_empty() {
                 skip
             } else {
@@ -291,6 +293,8 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
             last
         }
     } else if attr.path().is_ident(mode.name()) {
+        // If skip is not used, return the last occurrence of matching
+        // setter/getter, if there is any.
         attr.meta.clone().into()
     } else {
         None
