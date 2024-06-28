@@ -175,101 +175,81 @@ impl Foo {
 ```
 */
 
-extern crate proc_macro;
-extern crate syn;
 #[macro_use]
 extern crate quote;
-extern crate proc_macro2;
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use proc_macro_error::{abort, abort_call_site, proc_macro_error, ResultExt};
-use syn::{spanned::Spanned, DataStruct, DeriveInput, Meta};
+use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
+use syn::{parse_macro_input, spanned::Spanned, DataStruct, DeriveInput, Meta};
+
+use crate::generate::{GenMode, GenParams};
 
 mod generate;
-use crate::generate::{GenMode, GenParams};
 
 #[proc_macro_derive(Getters, attributes(get, with_prefix, getset))]
 #[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
-    // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
+    let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::Get,
         global_attr: parse_global_attr(&ast.attrs, GenMode::Get),
     };
 
-    // Build the impl
-    let gen = produce(&ast, &params);
-
-    // Return the generated impl
-    gen.into()
+    produce(&ast, &params).into()
 }
 
 #[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix, getset))]
 #[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
-    // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
+    let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::GetCopy,
         global_attr: parse_global_attr(&ast.attrs, GenMode::GetCopy),
     };
 
-    // Build the impl
-    let gen = produce(&ast, &params);
-
-    // Return the generated impl
-    gen.into()
+    produce(&ast, &params).into()
 }
 
 #[proc_macro_derive(MutGetters, attributes(get_mut, getset))]
 #[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
-    // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for getters");
+    let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::GetMut,
         global_attr: parse_global_attr(&ast.attrs, GenMode::GetMut),
     };
 
-    // Build the impl
-    let gen = produce(&ast, &params);
-    // Return the generated impl
-    gen.into()
+    produce(&ast, &params).into()
 }
 
 #[proc_macro_derive(Setters, attributes(set, getset))]
 #[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
-    // Parse the string representation
-    let ast: DeriveInput = syn::parse(input).expect_or_abort("Couldn't parse for setters");
+    let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::Set,
         global_attr: parse_global_attr(&ast.attrs, GenMode::Set),
     };
 
-    // Build the impl
-    let gen = produce(&ast, &params);
-
-    // Return the generated impl
-    gen.into()
+    produce(&ast, &params).into()
 }
 
 fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
-    attrs
-        .iter()
-        .filter_map(|v| parse_attr(v, mode)) // non "meta" attributes are not our concern
-        .last()
+    attrs.iter().filter_map(|v| parse_attr(v, mode)).last()
 }
 
-fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
+fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
     use syn::{punctuated::Punctuated, Token};
 
-    if attr.path.is_ident("getset") {
-        let (last, skip, mut collected) = attr
-            .parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
-            .unwrap_or_abort()
+    if attr.path().is_ident("getset") {
+        let meta_list =
+            match attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated) {
+                Ok(list) => list,
+                Err(e) => abort!(attr.span(), "Failed to parse getset attribute: {}", e),
+            };
+
+        let (last, skip, mut collected) = meta_list
             .into_iter()
             .inspect(|meta| {
                 if !(meta.path().is_ident("get")
@@ -289,8 +269,6 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
                     } else if meta.path().is_ident("skip") {
                         (last, Some(meta), collected)
                     } else {
-                        // Store inapplicable item for potential error message
-                        // if used with skip.
                         collected.push(meta);
                         (last, skip, collected)
                     }
@@ -309,14 +287,14 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<Meta> {
                 );
             }
         } else {
-            // If skip is not used, return the last occurrence of matching
-            // setter/getter, if there is any.
             last
         }
+    } else if attr.path().is_ident(mode.name()) {
+        // If skip is not used, return the last occurrence of matching
+        // setter/getter, if there is any.
+        attr.meta.clone().into()
     } else {
-        attr.parse_meta()
-            .ok()
-            .filter(|meta| meta.path().is_ident(mode.name()))
+        None
     }
 }
 
