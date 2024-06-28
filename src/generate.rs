@@ -5,7 +5,7 @@ use syn::{
     self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
 };
 
-use self::GenMode::*;
+use self::GenMode::{Get, GetCopy, GetMut, Set};
 use super::parse_attr;
 
 pub struct GenParams {
