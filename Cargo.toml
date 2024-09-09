@@ -6,14 +6,14 @@ Getset, we're ready to go!
 A procedural macro for generating the most basic getters and setters on fields.
 """
 version = "0.1.2"
-authors = ["Ana Hobden <ana@hoverbear.org>"]
+authors = ["Ana Hobden <ana@hoverbear.org>", "John Baublitz <john.m.baublitz@gmail.com"]
 license = "MIT"
 edition = "2018"
 
 categories = ["development-tools::procedural-macro-helpers"]
 keywords = ["macro", "getter", "setter", "getters", "setters"]
 readme = "README.md"
-repository = "https://github.com/Hoverbear/getset"
+repository = "https://github.com/jbaublitz/getset"
 
 [lib]
 proc-macro = true
