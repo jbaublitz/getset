@@ -35,7 +35,7 @@ assert_eq!(*foo.private(), 2);
 You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
 
 ```rust,ignore
-use getset::{Getters, MutGetters, CopyGetters, Setters};
+use getset::{Getters, MutGetters, CopyGetters, Setters, WithSetters};
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
@@ -107,7 +107,7 @@ precedence.
 
 ```rust
 mod submodule {
-    use getset::{Getters, MutGetters, CopyGetters, Setters};
+    use getset::{Getters, MutGetters, CopyGetters, Setters, WithSetters};
     #[derive(Getters, CopyGetters, Default)]
     #[getset(get_copy = "pub")] // By default add a pub getting for all fields.
     pub struct Foo {
@@ -129,7 +129,7 @@ For some purposes, it's useful to have the `get_` prefix on the getters for
 either legacy of compatibility reasons. It is done with `with_prefix`.
 
 ```rust
-use getset::{Getters, MutGetters, CopyGetters, Setters};
+use getset::{Getters, MutGetters, CopyGetters, Setters, WithSetters};
 
 #[derive(Getters, Default)]
 pub struct Foo {
@@ -146,10 +146,10 @@ Skipping setters and getters generation for a field when struct level attribute 
 is possible with `#[getset(skip)]`.
 
 ```rust
-use getset::{CopyGetters, Setters};
+use getset::{CopyGetters, Setters, WithSetters};
 
-#[derive(CopyGetters, Setters)]
-#[getset(get_copy, set)]
+#[derive(CopyGetters, Setters, WithSetters)]
+#[getset(get_copy, set, set_with)]
 pub struct Foo {
     // If the field was not skipped, the compiler would complain about moving
     // a non-copyable type in copy getter.
@@ -168,6 +168,11 @@ impl Foo {
     }
 
     fn set_skipped(&mut self, val: &str) -> &mut Self {
+        self.skipped = val.to_string();
+        self
+    }
+
+    fn with_skipped(mut self, val: &str) -> Self {
         self.skipped = val.to_string();
         self
     }
@@ -235,6 +240,18 @@ pub fn setters(input: TokenStream) -> TokenStream {
     produce(&ast, &params).into()
 }
 
+#[proc_macro_derive(WithSetters, attributes(set_with, getset))]
+#[proc_macro_error]
+pub fn with_setters(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let params = GenParams {
+        mode: GenMode::SetWith,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::SetWith),
+    };
+
+    produce(&ast, &params).into()
+}
+
 fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
     attrs.iter().filter_map(|v| parse_attr(v, mode)).last()
 }
@@ -256,6 +273,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
                     || meta.path().is_ident("get_copy")
                     || meta.path().is_ident("get_mut")
                     || meta.path().is_ident("set")
+                    || meta.path().is_ident("set_with")
                     || meta.path().is_ident("skip"))
                 {
                     abort!(meta.path().span(), "unknown setter or getter")

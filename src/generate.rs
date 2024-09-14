@@ -4,7 +4,7 @@ use syn::{
     self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
 };
 
-use self::GenMode::{Get, GetCopy, GetMut, Set};
+use self::GenMode::{Get, GetCopy, GetMut, Set, SetWith};
 use super::parse_attr;
 
 pub struct GenParams {
@@ -16,8 +16,9 @@ pub struct GenParams {
 pub enum GenMode {
     Get,
     GetCopy,
-    Set,
     GetMut,
+    Set,
+    SetWith,
 }
 
 impl GenMode {
@@ -25,8 +26,9 @@ impl GenMode {
         match self {
             Get => "get",
             GetCopy => "get_copy",
-            Set => "set",
             GetMut => "get_mut",
+            Set => "set",
+            SetWith => "set_with",
         }
     }
 
@@ -34,12 +36,13 @@ impl GenMode {
         match self {
             Get | GetCopy | GetMut => "",
             Set => "set_",
+            SetWith => "with_",
         }
     }
 
     pub fn suffix(self) -> &'static str {
         match self {
-            Get | GetCopy | Set => "",
+            Get | GetCopy | Set | SetWith => "",
             GetMut => "_mut",
         }
     }
@@ -47,7 +50,7 @@ impl GenMode {
     fn is_get(self) -> bool {
         match self {
             GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
-            GenMode::Set => false,
+            GenMode::Set | GenMode::SetWith => false,
         }
     }
 }
@@ -194,6 +197,16 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     #[inline(always)]
                     #visibility fn #fn_name(&mut self) -> &mut #ty {
                         &mut self.#field_name
+                    }
+                }
+            }
+            GenMode::SetWith => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(mut self, val: #ty) -> Self {
+                        self.#field_name = val;
+                        self
                     }
                 }
             }
