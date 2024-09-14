@@ -18,6 +18,7 @@ pub enum GenMode {
     GetCopy,
     Set,
     GetMut,
+    SetFluent
 }
 
 impl GenMode {
@@ -27,19 +28,20 @@ impl GenMode {
             GetCopy => "get_copy",
             Set => "set",
             GetMut => "get_mut",
+            SetFluent => "set_fluent"
         }
     }
 
     pub fn prefix(self) -> &'static str {
         match self {
             Get | GetCopy | GetMut => "",
-            Set => "set_",
+            Set | SetFluent => "set_",
         }
     }
 
     pub fn suffix(self) -> &'static str {
         match self {
-            Get | GetCopy | Set => "",
+            Get | GetCopy | Set | SetFluent => "",
             GetMut => "_mut",
         }
     }
@@ -47,7 +49,7 @@ impl GenMode {
     fn is_get(self) -> bool {
         match self {
             GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
-            GenMode::Set => false,
+            GenMode::Set | SetFluent => false,
         }
     }
 }
@@ -194,6 +196,17 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     #[inline(always)]
                     #visibility fn #fn_name(&mut self) -> &mut #ty {
                         &mut self.#field_name
+                    }
+                }
+            }
+            GenMode::SetFluent => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(self, val: #ty) -> Self {
+                        let mut moved_out = self;
+                        moved_out.#field_name = val;
+                        moved_out
                     }
                 }
             }
