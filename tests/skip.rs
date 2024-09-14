@@ -1,8 +1,8 @@
 #[macro_use]
 extern crate getset;
 
-#[derive(CopyGetters, Setters)]
-#[getset(get_copy, set)]
+#[derive(CopyGetters, Setters, WithSetters)]
+#[getset(get_copy, set, set_with)]
 pub struct Plain {
     // If the field was not skipped, the compiler would complain about moving a
     // non-copyable type.
@@ -30,6 +30,13 @@ impl Plain {
         self.non_copyable = val;
         self
     }
+
+    // If the field was not skipped, the compiler would complain about duplicate
+    // definitions of `with_non_copyable`.
+    fn with_non_copyable(mut self, val: String) -> Self {
+        self.non_copyable = val;
+        self
+    }
 }
 
 impl Default for Plain {
@@ -47,4 +54,6 @@ fn test_plain() {
     val.copyable();
     val.custom_non_copyable();
     val.set_non_copyable("bar".to_string());
+    val = val.with_non_copyable("foo".to_string());
+    let _ = val;
 }
