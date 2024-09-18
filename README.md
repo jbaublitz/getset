@@ -14,16 +14,16 @@ Getters are generated as `fn field(&self) -> &type`, while setters are generated
 These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
 
 ```rust
-use getset::{CopyGetters, Getters, MutGetters, Setters};
+use getset::{CopyGetters, Getters, MutGetters, Setters, Withers};
 
-#[derive(Getters, Setters, MutGetters, CopyGetters, Default)]
+#[derive(Getters, Setters, Withers, MutGetters, CopyGetters, Default)]
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
 {
     /// Doc comments are supported!
     /// Multiline, even.
-    #[getset(get, set, get_mut)]
+    #[getset(get, set, with, get_mut)]
     private: T,
 
     /// Doc comments are supported!
@@ -35,15 +35,16 @@ where
 fn main() {
     let mut foo = Foo::default();
     foo.set_private(1);
+    foo = foo.with_private(2)
     (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
+    assert_eq!(*foo.private(), 3);
 }
 ```
 
 You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
 
 ```rust
-use getset::{Getters, MutGetters, CopyGetters, Setters};
+use getset::{Getters, MutGetters, CopyGetters, Setters, Withers};
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
@@ -54,7 +55,7 @@ where
     private: T,
     /// Doc comments are supported!
     /// Multiline, even.
-    #[getset(get_copy = "pub", set = "pub", get_mut = "pub")]
+    #[getset(get_copy = "pub", set = "pub", with = "pub", get_mut = "pub")]
     public: T,
 }
 impl<T> Foo<T>
@@ -78,6 +79,15 @@ where
     pub fn set_public(&mut self, val: T) -> &mut Self {
         self.public = val;
         self
+    }
+    
+    /// Doc comments are supported!
+    /// Multiline, even.
+    #[inline(always)]
+    pub fn with_public(self, val: T) -> Self {
+        let mut v = self;
+        v.public = val;
+        v
     }
 }
 impl<T> Foo<T>
