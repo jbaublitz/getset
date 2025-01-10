@@ -173,6 +173,26 @@ impl Foo {
     }
 }
 ```
+
+For a unary struct (a tuple struct with a single field),
+the macro generates the `get`, `get_mut`, and `set` functions to
+provide a getter, a mutable getter, and a setter, respectively.
+
+```rust
+#[derive(Setters, Getters, MutGetters)]
+struct UnaryTuple(#[getset(set, get, get_mut)] i32);
+
+let mut tup = UnaryTuple(42);
+assert_eq!(tup.get(), &42);
+assert_eq!(tup.get_mut(), &mut 42);
+tup.set(43);
+assert_eq!(tup.get(), &43);
+
+#[derive(CopyGetters)]
+struct CopyUnaryTuple(#[getset(get_copy)] i32);
+
+let tup = CopyUnaryTuple(42);
+```
 */
 
 #[macro_use]
