@@ -305,11 +305,27 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
 
     // Is it a struct?
     if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
-        let generated = fields.iter().map(|f| generate::implement(f, params));
+        // Handle unary struct
+        if matches!(fields, syn::Fields::Unnamed(_)) {
+            if fields.len() != 1 {
+                abort_call_site!("Only support unary struct!");
+            }
+            // This unwrap is safe because we know there is exactly one field
+            let field = fields.iter().next().unwrap();
+            let generated = generate::implement_for_unnamed(field, params);
 
-        quote! {
-            impl #impl_generics #name #ty_generics #where_clause {
-                #(#generated)*
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    #generated
+                }
+            }
+        } else {
+            let generated = fields.iter().map(|f| generate::implement(f, params));
+
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    #(#generated)*
+                }
             }
         }
     } else {
