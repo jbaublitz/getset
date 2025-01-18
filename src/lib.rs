@@ -179,6 +179,8 @@ the macro generates the `get`, `get_mut`, and `set` functions to
 provide a getter, a mutable getter, and a setter, respectively.
 
 ```rust
+use getset::{Getters, MutGetters, CopyGetters, Setters};
+
 #[derive(Setters, Getters, MutGetters)]
 struct UnaryTuple(#[getset(set, get, get_mut)] i32);
 
