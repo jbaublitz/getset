@@ -109,9 +109,9 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         .filter_map(|attr| parse_attr(attr, params.mode))
         .find(|meta| meta.path().is_ident("get") || meta.path().is_ident("get_copy"))
         .as_ref()
-        .map_or(false, meta_has_prefix);
+        .is_some_and(meta_has_prefix);
 
-    let global_attr_has_prefix = params.global_attr.as_ref().map_or(false, meta_has_prefix);
+    let global_attr_has_prefix = params.global_attr.as_ref().is_some_and(meta_has_prefix);
 
     field_attr_has_prefix || global_attr_has_prefix
 }
