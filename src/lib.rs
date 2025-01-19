@@ -173,6 +173,28 @@ impl Foo {
     }
 }
 ```
+
+For a unary struct (a tuple struct with a single field),
+the macro generates the `get`, `get_mut`, and `set` functions to
+provide a getter, a mutable getter, and a setter, respectively.
+
+```rust
+use getset::{Getters, MutGetters, CopyGetters, Setters};
+
+#[derive(Setters, Getters, MutGetters)]
+struct UnaryTuple(#[getset(set, get, get_mut)] i32);
+
+let mut tup = UnaryTuple(42);
+assert_eq!(tup.get(), &42);
+assert_eq!(tup.get_mut(), &mut 42);
+tup.set(43);
+assert_eq!(tup.get(), &43);
+
+#[derive(CopyGetters)]
+struct CopyUnaryTuple(#[getset(get_copy)] i32);
+
+let tup = CopyUnaryTuple(42);
+```
 */
 
 #[macro_use]
@@ -305,11 +327,27 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
 
     // Is it a struct?
     if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
-        let generated = fields.iter().map(|f| generate::implement(f, params));
+        // Handle unary struct
+        if matches!(fields, syn::Fields::Unnamed(_)) {
+            if fields.len() != 1 {
+                abort_call_site!("Only support unary struct!");
+            }
+            // This unwrap is safe because we know there is exactly one field
+            let field = fields.iter().next().unwrap();
+            let generated = generate::implement_for_unnamed(field, params);
 
-        quote! {
-            impl #impl_generics #name #ty_generics #where_clause {
-                #(#generated)*
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    #generated
+                }
+            }
+        } else {
+            let generated = fields.iter().map(|f| generate::implement(f, params));
+
+            quote! {
+                impl #impl_generics #name #ty_generics #where_clause {
+                    #(#generated)*
+                }
             }
         }
     } else {
