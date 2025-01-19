@@ -8,6 +8,11 @@ env:
   RUSTFLAGS: "--deny=warnings"
 
 jobs:
+  branch_protection:
+    runs-on: ubuntu-latest
+    steps:
+      - run: ':'
+
   test:
     strategy:
       matrix:
