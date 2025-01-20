@@ -216,49 +216,48 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
     match attr {
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
-        Some(_) => match params.mode {
-            GenMode::Get => {
-                let fn_name = Ident::new("get", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> &#ty {
-                        &self.0
+        Some(_) => {
+            let fn_name = Ident::new(params.mode.name(), Span::call_site());
+            match params.mode {
+                GenMode::Get => {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility fn #fn_name(&self) -> &#ty {
+                            &self.0
+                        }
+                    }
+                }
+                GenMode::GetCopy => {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility fn #fn_name(&self) -> #ty {
+                            self.0
+                        }
+                    }
+                }
+                GenMode::Set => {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
+                            self.0 = val;
+                            self
+                        }
+                    }
+                }
+                GenMode::GetMut => {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility fn #fn_name(&mut self) -> &mut #ty {
+                            &mut self.0
+                        }
                     }
                 }
             }
-            GenMode::GetCopy => {
-                let fn_name = Ident::new("get", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
-                        self.0
-                    }
-                }
-            }
-            GenMode::Set => {
-                let fn_name = Ident::new("set", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                        self.0 = val;
-                        self
-                    }
-                }
-            }
-            GenMode::GetMut => {
-                let fn_name = Ident::new("get_mut", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self) -> &mut #ty {
-                        &mut self.0
-                    }
-                }
-            }
-        },
+        }
         None => quote! {},
     }
 }

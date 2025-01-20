@@ -15,7 +15,7 @@ fn test_unary_tuple() {
     struct CopyUnaryTuple(#[getset(get_copy)] i32);
 
     let tup = CopyUnaryTuple(42);
-    assert_eq!(tup.get(), 42);
+    assert_eq!(tup.get_copy(), 42);
 }
 
 #[test]
@@ -35,5 +35,5 @@ fn test_unary_tuple_with_attrs() {
     struct CopyUnaryTuple(i32);
 
     let tup = CopyUnaryTuple(42);
-    assert_eq!(tup.get(), 42);
+    assert_eq!(tup.get_copy(), 42);
 }
