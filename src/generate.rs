@@ -110,7 +110,11 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         .attrs
         .iter()
         .filter_map(|attr| parse_attr(attr, params.mode))
-        .find(|meta| meta.path().is_ident("get") || meta.path().is_ident("get_copy"))
+        .find(|meta| {
+            meta.path().is_ident("get")
+                || meta.path().is_ident("get_copy")
+                || meta.path().is_ident("get_mut")
+        })
         .as_ref()
         .is_some_and(meta_has_prefix);
 

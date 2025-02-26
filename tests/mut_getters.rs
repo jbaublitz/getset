@@ -28,6 +28,14 @@ mod submodule {
             // /// A doc comment.
             // #[get_mut = "pub(in super::other)"]
             // scope_accessible: usize,
+
+            // Prefixed getter.
+            #[get_mut = "with_prefix"]
+            private_prefixed: usize,
+
+            // Prefixed getter.
+            #[get_mut = "pub with_prefix"]
+            public_prefixed: usize,
         }
 
         #[derive(MutGetters, Default)]
@@ -51,6 +59,14 @@ mod submodule {
             // /// A doc comment.
             // #[get_mut = "pub(in super::other)"]
             // scope_accessible: usize,
+
+            // Prefixed getter.
+            #[get_mut = "with_prefix"]
+            private_prefixed: T,
+
+            // Prefixed getter.
+            #[get_mut = "pub with_prefix"]
+            public_prefixed: T,
         }
 
         #[derive(MutGetters, Default)]
@@ -77,24 +93,35 @@ mod submodule {
             // /// A doc comment.
             // #[get_mut = "pub(in super::other)"]
             // scope_accessible: usize,
+
+            // Prefixed getter.
+            #[get_mut = "with_prefix"]
+            private_prefixed: T,
+
+            // Prefixed getter.
+            #[get_mut = "pub with_prefix"]
+            public_prefixed: T,
         }
 
         #[test]
         fn test_plain() {
             let mut val = Plain::default();
             (*val.private_accessible_mut()) += 1;
+            (*val.get_private_prefixed_mut()) += 1;
         }
 
         #[test]
         fn test_generic() {
             let mut val = Generic::<usize>::default();
             (*val.private_accessible_mut()) += 1;
+            (*val.get_private_prefixed_mut()) += 1;
         }
 
         #[test]
         fn test_where() {
             let mut val = Where::<usize>::default();
             (*val.private_accessible_mut()) += 1;
+            (*val.get_private_prefixed_mut()) += 1;
         }
     }
 }
@@ -103,16 +130,19 @@ mod submodule {
 fn test_plain() {
     let mut val = Plain::default();
     (*val.public_accessible_mut()) += 1;
+    (*val.get_public_prefixed_mut()) += 1;
 }
 
 #[test]
 fn test_generic() {
     let mut val = Generic::<usize>::default();
     (*val.public_accessible_mut()) += 1;
+    (*val.get_public_prefixed_mut()) += 1;
 }
 
 #[test]
 fn test_where() {
     let mut val = Where::<usize>::default();
     (*val.public_accessible_mut()) += 1;
+    (*val.get_public_prefixed_mut()) += 1;
 }
