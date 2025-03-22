@@ -226,6 +226,18 @@ pub fn getters(input: TokenStream) -> TokenStream {
     produce(&ast, &params).into()
 }
 
+#[proc_macro_derive(CloneGetters, attributes(get_clone, with_prefix, getset))]
+#[proc_macro_error]
+pub fn clone_getters(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let params = GenParams {
+        mode: GenMode::GetClone,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetClone),
+    };
+
+    produce(&ast, &params).into()
+}
+
 #[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix, getset))]
 #[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
@@ -292,6 +304,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
             .into_iter()
             .inspect(|meta| {
                 if !(meta.path().is_ident("get")
+                    || meta.path().is_ident("get_clone")
                     || meta.path().is_ident("get_copy")
                     || meta.path().is_ident("get_mut")
                     || meta.path().is_ident("set")
