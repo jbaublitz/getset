@@ -1,3 +1,4 @@
+use fixture::add_1_to_implementation;
 use getset::{CloneGetters, CopyGetters};
 
 #[derive(CopyGetters, CloneGetters)]

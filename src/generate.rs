@@ -1,7 +1,8 @@
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use proc_macro_error2::abort;
 use syn::{
-    self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
+    self, ext::IdentExt, spanned::Spanned, Attribute, Expr, Field, Lit, Meta, MetaNameValue,
+    Visibility,
 };
 
 use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};
@@ -10,6 +11,7 @@ use super::parse_attr;
 pub struct GenParams {
     pub mode: GenMode,
     pub global_attr: Option<Meta>,
+    pub impl_attrs: Vec<Attribute>,
 }
 
 #[derive(PartialEq, Eq, Copy, Clone)]
@@ -58,7 +60,7 @@ impl GenMode {
 }
 
 // Helper function to extract string from Expr
-fn expr_to_string(expr: &Expr) -> Option<String> {
+pub(crate) fn expr_to_string(expr: &Expr) -> Option<String> {
     if let Expr::Lit(expr_lit) = expr {
         if let Lit::Str(s) = &expr_lit.lit {
             Some(s.value())
@@ -111,7 +113,7 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
     let field_attr_has_prefix = f
         .attrs
         .iter()
-        .filter_map(|attr| parse_attr(attr, params.mode))
+        .filter_map(|attr| parse_attr(attr, params.mode, false).0)
         .find(|meta| {
             meta.path().is_ident("get")
                 || meta.path().is_ident("get_clone")
@@ -161,7 +163,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
     let attr = field
         .attrs
         .iter()
-        .filter_map(|v| parse_attr(v, params.mode))
+        .filter_map(|v| parse_attr(v, params.mode, false).0)
         .last()
         .or_else(|| params.global_attr.clone());
 
@@ -236,7 +238,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
     let attr = field
         .attrs
         .iter()
-        .filter_map(|v| parse_attr(v, params.mode))
+        .filter_map(|v| parse_attr(v, params.mode, false).0)
         .last()
         .or_else(|| params.global_attr.clone());
     let ty = field.ty.clone();
