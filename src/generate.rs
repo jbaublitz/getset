@@ -71,7 +71,7 @@ fn expr_to_string(expr: &Expr) -> Option<String> {
 }
 
 // Helper function to parse visibility
-fn parse_vis_str(s: &str, span: proc_macro2::Span) -> Visibility {
+fn parse_vis_str(s: &str, span: Span) -> Visibility {
     match syn::parse_str(s) {
         Ok(vis) => vis,
         Err(e) => abort!(span, "Invalid visibility found: {}", e),

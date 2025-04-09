@@ -208,7 +208,10 @@ extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
-use syn::{parse_macro_input, spanned::Spanned, DataStruct, DeriveInput, Meta};
+use syn::{
+    parse_macro_input, punctuated::Punctuated, spanned::Spanned, Attribute, Data, DataStruct,
+    DeriveInput, Fields, Meta, Token,
+};
 
 use crate::generate::{GenMode, GenParams};
 
@@ -218,10 +221,7 @@ mod generate;
 #[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::Get,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::Get),
-    };
+    let params = make_params(&ast.attrs, GenMode::Get);
 
     produce(&ast, &params).into()
 }
@@ -230,10 +230,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn clone_getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::GetClone,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::GetClone),
-    };
+    let params = make_params(&ast.attrs, GenMode::GetClone);
 
     produce(&ast, &params).into()
 }
@@ -242,10 +239,7 @@ pub fn clone_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::GetCopy,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::GetCopy),
-    };
+    let params = make_params(&ast.attrs, GenMode::GetCopy);
 
     produce(&ast, &params).into()
 }
@@ -254,10 +248,7 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::GetMut,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::GetMut),
-    };
+    let params = make_params(&ast.attrs, GenMode::GetMut);
 
     produce(&ast, &params).into()
 }
@@ -266,10 +257,7 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::Set,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::Set),
-    };
+    let params = make_params(&ast.attrs, GenMode::Set);
 
     produce(&ast, &params).into()
 }
@@ -278,27 +266,25 @@ pub fn setters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn with_setters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::SetWith,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::SetWith),
-    };
+    let params = make_params(&ast.attrs, GenMode::SetWith);
 
     produce(&ast, &params).into()
 }
 
-fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
-    attrs.iter().filter_map(|v| parse_attr(v, mode)).last()
+fn make_params(attrs: &[Attribute], mode: GenMode) -> GenParams {
+    GenParams {
+        mode,
+        global_attr: attrs.iter().filter_map(|v| parse_attr(v, mode)).last(),
+    }
 }
 
-fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
-    use syn::{punctuated::Punctuated, Token};
-
+fn parse_attr(attr: &Attribute, mode: GenMode) -> Option<Meta> {
     if attr.path().is_ident("getset") {
-        let meta_list =
-            match attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated) {
-                Ok(list) => list,
-                Err(e) => abort!(attr.span(), "Failed to parse getset attribute: {}", e),
-            };
+        let meta_list = match attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+        {
+            Ok(list) => list,
+            Err(e) => abort!(attr.span(), "Failed to parse getset attribute: {}", e),
+        };
 
         let (last, skip, mut collected) = meta_list
             .into_iter()
@@ -357,9 +343,9 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
-    if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
+    if let Data::Struct(DataStruct { ref fields, .. }) = ast.data {
         // Handle unary struct
-        if matches!(fields, syn::Fields::Unnamed(_)) {
+        if matches!(fields, Fields::Unnamed(_)) {
             if fields.len() != 1 {
                 abort_call_site!("Only support unary struct!");
             }
