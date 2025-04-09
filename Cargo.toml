@@ -26,3 +26,6 @@ quote = "1"
 syn = "2"
 proc-macro2 = { version = "1", default-features = false }
 proc-macro-error2 = "2"
+
+[dev-dependencies]
+fixture = { path = "tests/fixture" }

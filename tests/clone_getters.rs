@@ -51,7 +51,7 @@ mod submodule {
 
         #[derive(CloneGetters, Default)]
         #[get_clone]
-        pub struct Generic<T:  Clone + Default> {
+        pub struct Generic<T: Clone + Default> {
             /// A doc comment.
             /// Multiple lines, even.
             private_accessible: T,
