@@ -1,0 +1,11 @@
+[package]
+name = "fixture"
+edition = "2018"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+proc-macro-error2 = "2.0.1"
+quote = "1.0.40"
+syn = { version = "2.0.100", features = ["full"] }

@@ -208,9 +208,12 @@ extern crate quote;
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
-use syn::{parse_macro_input, spanned::Spanned, DataStruct, DeriveInput, Meta};
+use syn::{
+    parse_macro_input, parse_str, punctuated::Punctuated, spanned::Spanned, Attribute, Data,
+    DataStruct, DeriveInput, Fields, ItemImpl, Meta, Token,
+};
 
-use crate::generate::{GenMode, GenParams};
+use crate::generate::{expr_to_string, GenMode, GenParams};
 
 mod generate;
 
@@ -218,10 +221,16 @@ mod generate;
 #[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::Get,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::Get),
-    };
+    let params = make_params(&ast.attrs, GenMode::Get);
+
+    produce(&ast, &params).into()
+}
+
+#[proc_macro_derive(CloneGetters, attributes(get_clone, with_prefix, getset))]
+#[proc_macro_error]
+pub fn clone_getters(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+    let params = make_params(&ast.attrs, GenMode::GetClone);
 
     produce(&ast, &params).into()
 }
@@ -230,10 +239,7 @@ pub fn getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::GetCopy,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::GetCopy),
-    };
+    let params = make_params(&ast.attrs, GenMode::GetCopy);
 
     produce(&ast, &params).into()
 }
@@ -242,10 +248,7 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::GetMut,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::GetMut),
-    };
+    let params = make_params(&ast.attrs, GenMode::GetMut);
 
     produce(&ast, &params).into()
 }
@@ -254,10 +257,7 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::Set,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::Set),
-    };
+    let params = make_params(&ast.attrs, GenMode::Set);
 
     produce(&ast, &params).into()
 }
@@ -266,51 +266,79 @@ pub fn setters(input: TokenStream) -> TokenStream {
 #[proc_macro_error]
 pub fn with_setters(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
-    let params = GenParams {
-        mode: GenMode::SetWith,
-        global_attr: parse_global_attr(&ast.attrs, GenMode::SetWith),
-    };
+    let params = make_params(&ast.attrs, GenMode::SetWith);
 
     produce(&ast, &params).into()
 }
 
-fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
-    attrs.iter().filter_map(|v| parse_attr(v, mode)).last()
+fn make_params(attrs: &[Attribute], mode: GenMode) -> GenParams {
+    let mut impl_attrs = vec![];
+    GenParams {
+        mode,
+        global_attr: attrs
+            .iter()
+            .filter_map(|v| {
+                let (attr, impl_attrs_exist) = parse_attr(v, mode, true);
+                if let Some(Meta::NameValue(code)) = &impl_attrs_exist {
+                    match expr_to_string(&code.value) {
+                        Some(code_str) => {
+                            match parse_str::<ItemImpl>(&format!("{} impl _ {{}}", code_str)) {
+                                Ok(parsed_impl) => impl_attrs.extend(parsed_impl.attrs),
+                                Err(_) => abort!(
+                                    code.value.span(),
+                                    "Syntax error, expected attributes like #[..]."
+                                ),
+                            }
+                        }
+                        None => abort!(code.value.span(), "Expected string."),
+                    }
+                }
+                attr
+            })
+            .last(),
+        impl_attrs,
+    }
 }
 
-fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
-    use syn::{punctuated::Punctuated, Token};
-
+fn parse_attr(
+    attr: &Attribute,
+    mode: GenMode,
+    globally_called: bool,
+) -> (Option<Meta>, Option<Meta>) {
     if attr.path().is_ident("getset") {
-        let meta_list =
-            match attr.parse_args_with(Punctuated::<syn::Meta, Token![,]>::parse_terminated) {
-                Ok(list) => list,
-                Err(e) => abort!(attr.span(), "Failed to parse getset attribute: {}", e),
-            };
+        let meta_list = match attr.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)
+        {
+            Ok(list) => list,
+            Err(e) => abort!(attr.span(), "Failed to parse getset attribute: {}", e),
+        };
 
-        let (last, skip, mut collected) = meta_list
+        let (last, skip, impl_attrs, mut collected) = meta_list
             .into_iter()
             .inspect(|meta| {
                 if !(meta.path().is_ident("get")
+                    || meta.path().is_ident("get_clone")
                     || meta.path().is_ident("get_copy")
                     || meta.path().is_ident("get_mut")
                     || meta.path().is_ident("set")
                     || meta.path().is_ident("set_with")
-                    || meta.path().is_ident("skip"))
+                    || meta.path().is_ident("skip")
+                    || (meta.path().is_ident("impl_attrs") && globally_called))
                 {
                     abort!(meta.path().span(), "unknown setter or getter")
                 }
             })
             .fold(
-                (None, None, Vec::new()),
-                |(last, skip, mut collected), meta| {
+                (None, None, None, Vec::new()),
+                |(last, skip, impl_attrs, mut collected), meta| {
                     if meta.path().is_ident(mode.name()) {
-                        (Some(meta), skip, collected)
+                        (Some(meta), skip, impl_attrs, collected)
                     } else if meta.path().is_ident("skip") {
-                        (last, Some(meta), collected)
+                        (last, Some(meta), impl_attrs, collected)
+                    } else if meta.path().is_ident("impl_attrs") {
+                        (last, skip, Some(meta), collected)
                     } else {
                         collected.push(meta);
-                        (last, skip, collected)
+                        (last, skip, impl_attrs, collected)
                     }
                 },
             );
@@ -319,7 +347,7 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
             // Check if there is any setter or getter used with skip, which is
             // forbidden.
             if last.is_none() && collected.is_empty() {
-                skip
+                (skip, impl_attrs)
             } else {
                 abort!(
                     last.or_else(|| collected.pop()).unwrap().path().span(),
@@ -327,26 +355,27 @@ fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
                 );
             }
         } else {
-            last
+            (last, impl_attrs)
         }
     } else if attr.path().is_ident(mode.name()) {
         // If skip is not used, return the last occurrence of matching
         // setter/getter, if there is any.
-        attr.meta.clone().into()
+        (attr.meta.clone().into(), None)
     } else {
-        None
+        (None, None)
     }
 }
 
 fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
+    let impl_attrs = &params.impl_attrs;
     let name = &ast.ident;
     let generics = &ast.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     // Is it a struct?
-    if let syn::Data::Struct(DataStruct { ref fields, .. }) = ast.data {
+    if let Data::Struct(DataStruct { ref fields, .. }) = ast.data {
         // Handle unary struct
-        if matches!(fields, syn::Fields::Unnamed(_)) {
+        if matches!(fields, Fields::Unnamed(_)) {
             if fields.len() != 1 {
                 abort_call_site!("Only support unary struct!");
             }
@@ -355,6 +384,8 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
             let generated = generate::implement_for_unnamed(field, params);
 
             quote! {
+                #(#impl_attrs)*
+                #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
                     #generated
                 }
@@ -363,6 +394,8 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
             let generated = fields.iter().map(|f| generate::implement(f, params));
 
             quote! {
+                #(#impl_attrs)*
+                #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
                     #(#generated)*
                 }
