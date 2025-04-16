@@ -385,6 +385,7 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
 
             quote! {
                 #(#impl_attrs)*
+                #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
                     #generated
                 }
@@ -394,6 +395,7 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
 
             quote! {
                 #(#impl_attrs)*
+                #[automatically_derived]
                 impl #impl_generics #name #ty_generics #where_clause {
                     #(#generated)*
                 }
