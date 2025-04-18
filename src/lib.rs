@@ -275,7 +275,7 @@ pub fn with_setters(input: TokenStream) -> TokenStream {
 }
 
 fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
-    attrs.iter().filter_map(|v| parse_attr(v, mode)).last()
+    attrs.iter().filter_map(|v| parse_attr(v, mode)).next_back()
 }
 
 fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {

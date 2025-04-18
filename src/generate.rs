@@ -159,7 +159,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .attrs
         .iter()
         .filter_map(|v| parse_attr(v, params.mode))
-        .last()
+        .next_back()
         .or_else(|| params.global_attr.clone());
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
@@ -225,7 +225,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
         .attrs
         .iter()
         .filter_map(|v| parse_attr(v, params.mode))
-        .last()
+        .next_back()
         .or_else(|| params.global_attr.clone());
     let ty = field.ty.clone();
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());

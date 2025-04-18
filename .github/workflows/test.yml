@@ -20,10 +20,10 @@ jobs:
         rust: [stable, nightly]
     runs-on: ${{ matrix.os }}
     steps:
-    - uses: actions/checkout@v1
+    - uses: actions/checkout@v4
     - name: Cache target
       id: cache-target
-      uses: actions/cache@v1
+      uses: actions/cache@v4
       with:
         path: target
         key: ${{ runner.os }}-${{ matrix.rust }}-test-target-${{ hashFiles('**/Cargo.toml') }}
@@ -40,10 +40,10 @@ jobs:
   clippy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Cache target
         id: cache-target
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: target
           key: ${{ runner.os }}-clippy-target-${{ hashFiles('**/Cargo.toml') }}
@@ -59,10 +59,10 @@ jobs:
   format:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
       - name: Cache target
         id: cache-target
-        uses: actions/cache@v1
+        uses: actions/cache@v4
         with:
           path: target
           key: ${{ runner.os }}-format-target-${{ hashFiles('**/Cargo.toml') }}
