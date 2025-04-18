@@ -4,7 +4,7 @@ use syn::{
     self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
 };
 
-use self::GenMode::{Get, GetCopy, GetMut, Set, SetWith};
+use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};
 use super::parse_attr;
 
 pub struct GenParams {
@@ -15,6 +15,7 @@ pub struct GenParams {
 #[derive(PartialEq, Eq, Copy, Clone)]
 pub enum GenMode {
     Get,
+    GetClone,
     GetCopy,
     GetMut,
     Set,
@@ -25,6 +26,7 @@ impl GenMode {
     pub fn name(self) -> &'static str {
         match self {
             Get => "get",
+            GetClone => "get_clone",
             GetCopy => "get_copy",
             GetMut => "get_mut",
             Set => "set",
@@ -34,7 +36,7 @@ impl GenMode {
 
     pub fn prefix(self) -> &'static str {
         match self {
-            Get | GetCopy | GetMut => "",
+            Get | GetClone | GetCopy | GetMut => "",
             Set => "set_",
             SetWith => "with_",
         }
@@ -42,15 +44,15 @@ impl GenMode {
 
     pub fn suffix(self) -> &'static str {
         match self {
-            Get | GetCopy | Set | SetWith => "",
+            Get | GetClone | GetCopy | Set | SetWith => "",
             GetMut => "_mut",
         }
     }
 
     fn is_get(self) -> bool {
         match self {
-            GenMode::Get | GenMode::GetCopy | GenMode::GetMut => true,
-            GenMode::Set | GenMode::SetWith => false,
+            Get | GetClone | GetCopy | GetMut => true,
+            Set | SetWith => false,
         }
     }
 }
@@ -112,6 +114,7 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
         .filter_map(|attr| parse_attr(attr, params.mode))
         .find(|meta| {
             meta.path().is_ident("get")
+                || meta.path().is_ident("get_clone")
                 || meta.path().is_ident("get_copy")
                 || meta.path().is_ident("get_mut")
         })
@@ -167,7 +170,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
-            GenMode::Get => {
+            Get => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -176,7 +179,16 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     }
                 }
             }
-            GenMode::GetCopy => {
+            GetClone => {
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&self) -> #ty {
+                        self.#field_name.clone()
+                    }
+                }
+            }
+            GetCopy => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -185,7 +197,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     }
                 }
             }
-            GenMode::Set => {
+            Set => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -195,7 +207,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     }
                 }
             }
-            GenMode::GetMut => {
+            GetMut => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -204,7 +216,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                     }
                 }
             }
-            GenMode::SetWith => {
+            SetWith => {
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -234,7 +246,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
-            GenMode::Get => {
+            Get => {
                 let fn_name = Ident::new("get", Span::call_site());
                 quote! {
                     #(#doc)*
@@ -244,7 +256,17 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                     }
                 }
             }
-            GenMode::GetCopy => {
+            GetClone => {
+                let fn_name = Ident::new("get", Span::call_site());
+                quote! {
+                    #(#doc)*
+                    #[inline(always)]
+                    #visibility fn #fn_name(&self) -> #ty {
+                        self.0.clone()
+                    }
+                }
+            }
+            GetCopy => {
                 let fn_name = Ident::new("get", Span::call_site());
                 quote! {
                     #(#doc)*
@@ -254,7 +276,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                     }
                 }
             }
-            GenMode::Set => {
+            Set => {
                 let fn_name = Ident::new("set", Span::call_site());
                 quote! {
                     #(#doc)*
@@ -265,7 +287,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                     }
                 }
             }
-            GenMode::GetMut => {
+            GetMut => {
                 let fn_name = Ident::new("get_mut", Span::call_site());
                 quote! {
                     #(#doc)*
@@ -275,7 +297,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                     }
                 }
             }
-            GenMode::SetWith => {
+            SetWith => {
                 let fn_name = Ident::new("set_with", Span::call_site());
                 quote! {
                     #(#doc)*
