@@ -5,203 +5,290 @@
 [![Docs](https://docs.rs/getset/badge.svg)](https://docs.rs/getset/)
 [![Coverage Status](https://coveralls.io/repos/github/Hoverbear/getset/badge.svg)](https://coveralls.io/github/Hoverbear/getset)
 
-Getset, we're ready to go!
+A Rust procedural macros to generate basic getters and setters for struct fields.
 
-A procedural macro for generating the most basic getters and setters on fields.
+## Quick Start
 
-Getters are generated as `fn field(&self) -> &type`, while setters are generated as `fn field(&mut self, val: type)`.
-
-These macros are not intended to be used on fields which require custom logic inside of their setters and getters. Just write your own in that case!
+### What you write
 
 ```rust
-use getset::{CopyGetters, Getters, MutGetters, Setters, WithSetters};
+use getset::{CopyGetters, MutGetters, Setters};
 
-#[derive(Getters, Setters, MutGetters, CopyGetters, WithSetters, Default)]
+#[derive(Setters, MutGetters, CopyGetters)]
+#[derive(Default)]
 pub struct Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[getset(get, set, get_mut, set_with)]
-    private: T,
-
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[getset(get_copy = "pub", set = "pub", get_mut = "pub", set_with = "pub")]
-    public: T,
-}
-
-fn main() {
-    let mut foo = Foo::default();
-    foo.set_private(1);
-    (*foo.private_mut()) += 1;
-    assert_eq!(*foo.private(), 2);
-    foo = foo.with_private(3);
-    assert_eq!(*foo.private(), 3);
+    #[getset(get_copy, set, get_mut)]
+    bar: T,
 }
 ```
 
-You can use `cargo-expand` to generate the output. Here are the functions that the above generates (Replicate with `cargo expand --example simple`):
+### What you get
+
+Use [`cargo-expand`](https://github.com/dtolnay/cargo-expand) to view the macro expansion:
 
 ```rust
-use getset::{CopyGetters, Getters, MutGetters, Setters, WithSetters};
-pub struct Foo<T>
-where
-    T: Copy + Clone + Default,
-{
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[getset(get, get, get_mut)]
-    private: T,
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[getset(get_copy = "pub", set = "pub", get_mut = "pub", set_with = "pub")]
-    public: T,
-}
+# pub struct Foo<T>
+# where
+#     T: Copy + Clone + Default,
+# {
+#     bar: T,
+# }
 impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    /// Doc comments are supported!
-    /// Multiline, even.
     #[inline(always)]
-    fn private(&self) -> &T {
-        &self.private
+    fn bar(&self) -> T {
+        self.bar
     }
 }
+
 impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    /// Doc comments are supported!
-    /// Multiline, even.
     #[inline(always)]
-    pub fn set_public(&mut self, val: T) -> &mut Self {
-        self.public = val;
+    fn set_bar(&mut self, val: T) -> &mut Self {
+        self.bar = val;
         self
     }
 }
+
 impl<T> Foo<T>
 where
     T: Copy + Clone + Default,
 {
-    /// Doc comments are supported!
-    /// Multiline, even.
     #[inline(always)]
-    fn private_mut(&mut self) -> &mut T {
-        &mut self.private
-    }
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[inline(always)]
-    pub fn public_mut(&mut self) -> &mut T {
-        &mut self.public
-    }
-}
-impl<T> Foo<T>
-where
-    T: Copy + Clone + Default,
-{
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[inline(always)]
-    pub fn public(&self) -> T {
-        self.public
-    }
-}
-impl<T> Foo<T>
-where
-    T: Copy + Clone + Default,
-{
-    /// Doc comments are supported!
-    /// Multiline, even.
-    #[inline(always)]
-    pub fn with_public(mut self, val: T) -> Self {
-        self.public = val;
-        self
+    fn bar_mut(&mut self) -> &mut T {
+        &mut self.bar
     }
 }
 ```
 
-Attributes can be set on struct level for all fields in struct as well. Field level attributes take
-precedence.
+## Features
+
+### CopyGetters
+
+Derive a getter that returns a copy of the field value.
 
 ```rust
-#[macro_use]
-extern crate getset;
-
-mod submodule {
-    #[derive(Getters, CopyGetters, Default)]
-    #[get_copy = "pub"] // By default add a pub getting for all fields.
-    pub struct Foo {
-        public: i32,
-        #[get_copy] // Override as private
-        private: i32,
-    }
-    fn demo() {
-        let mut foo = Foo::default();
-        foo.private();
-    }
-}
-fn main() {
-    let mut foo = submodule::Foo::default();
-    foo.public();
-}
-```
-
-For some purposes, it's useful to have the `get_` prefix on the getters for
-either legacy of compatability reasons. It is done with `with_prefix`.
-
-```rust
-#[macro_use]
-extern crate getset;
-
-#[derive(Getters, Default)]
+# use getset::CopyGetters;
+#
+#[derive(CopyGetters)]
 pub struct Foo {
-    #[get = "pub with_prefix"]
+    #[getset(get_copy)]
+    field: i32,
+}
+
+let foo = Foo { field: 42 };
+assert_eq!(foo.field(), 42);
+```
+
+### Getters
+
+Derive a getter that returns a reference to the field.
+
+```rust
+# use getset::Getters;
+#
+#[derive(Getters)]
+pub struct Foo<T> {
+    #[getset(get)]
+    field: T,
+}
+
+let foo = Foo { field: String::from("hello") };
+assert_eq!(foo.field(), &String::from("hello"));
+```
+
+### MutGetters
+
+Derive a getter that returns a mutable reference to the field.
+
+```rust
+# use getset::MutGetters;
+#
+#[derive(MutGetters)]
+pub struct Foo {
+    #[getset(get_mut)]
+    field: i32,
+}
+
+let mut foo = Foo { field: 42 };
+*foo.field_mut() = 43;
+assert_eq!(foo.field, 43);
+```
+
+### Setters
+
+Derive a setter.
+
+```rust
+# use getset::Setters;
+#
+#[derive(Setters)]
+pub struct Foo {
+    #[getset(set)]
+    field: i32,
+}
+
+let mut foo = Foo { field: 42 };
+foo.set_field(43);
+assert_eq!(foo.field, 43);
+```
+
+### WithSetters
+
+Derive setters that return `Self` to enable chaining.
+
+```rust
+# use getset::WithSetters;
+#
+#[derive(WithSetters)]
+#[derive(Default)]
+pub struct Foo {
+    #[getset(set_with)]
+    field1: i32,
+    #[getset(set_with)]
+    field2: i32,
+}
+
+let foo = Foo::default().with_field1(86).with_field2(87);
+assert_eq!(foo.field1, 86);
+assert_eq!(foo.field2, 87);
+```
+
+### Getter Prefix
+
+Although getters with `get_` do not align with the [RFC-344 convention](https://github.com/rust-lang/rfcs/blob/master/text/0344-conventions-galore.md#gettersetter-apis), they can still be generated using the `with_prefix` feature.
+
+```rust
+# use getset::Getters;
+#
+#[derive(Getters)]
+pub struct Foo {
+    #[getset(get = "with_prefix")]
     field: bool,
 }
 
-fn main() {
-    let mut foo = Foo::default();
-    let val = foo.get_field();
-}
+let foo = Foo { field: true };
+let val = foo.get_field();
 ```
 
-Skipping setters and getters generation for a field when struct level attribute is used
-is possible with `#[getset(skip)]`.
+### Visibility
+
+Customize visibility for generated functions at both the field and struct levels. Supported visibility options include `pub`, `pub(crate)`, `pub(super)`, `pub(in path)`, and `pub(self)`.
+
+#### Field-Specific Visibility
 
 ```rust
-use getset::{CopyGetters, Setters};
+mod submodule {
+#   use getset::{Getters, Setters};
+#
+    #[derive(Getters, Setters)]
+    #[derive(Default)]
+    pub struct Foo {
+        #[getset(get = "pub", set)]
+        field: i32,
+    }
+}
 
+use submodule::Foo;
+
+let foo = Foo::default();
+foo.field();          // Public getter
+// foo.set_field(10); // Private setter
+```
+
+#### Struct-Level Visibility
+
+```rust
+mod submodule {
+#   use getset::{Getters, Setters};
+#
+    #[derive(Getters, Setters)]
+    #[derive(Default)]
+    #[getset(get = "pub", set")]
+    pub struct Foo {
+        field1: i32,
+        field2: i32,
+    }
+}
+
+use submodule::Foo;
+
+let foo = Foo::default();
+foo.field1();          // Public getter
+foo.field2();          // Public getter
+// foo.set_field1(10); // Private setter
+// foo.set_field2(10); // Private setter
+```
+
+### Field-Level and Struct-Level Attributes
+
+Attributes can be applied to fields or the entire struct. Field-level attributes override struct-level settings.
+
+```rust
+mod submodule {
+#   use getset::{Getters};
+#
+    #[derive(Getters)]
+    #[derive(Default)]
+    #[getset(get = "pub")]
+    pub struct Foo {
+        field1: i32,
+        #[getset(get)]
+        field2: i32,
+    }
+}
+
+use submodule::Foo;
+
+let foo = Foo::default();
+foo.field1();          // Public getter
+// foo.field2();       // Private getter
+```
+
+### Hidden Field
+
+Fields can skip getter or setter generation with `#[getset(skip)]`.
+
+```rust
+# use getset::{CopyGetters, Setters};
+#
 #[derive(CopyGetters, Setters)]
-#[getset(get_copy, set, set_with)]
+#[getset(get_copy, set)]
 pub struct Foo {
-    // If the field was not skipped, the compiler would complain about moving
-    // a non-copyable type in copy getter.
     #[getset(skip)]
     skipped: String,
-
-    field1: usize,
-    field2: usize,
+    field: i32,
 }
 
-impl Foo {
-    // It is possible to write getters and setters manually,
-    // possibly with a custom logic.
-    fn skipped(&self) -> &str {
-        &self.skipped
-    }
+let foo = Foo { skipped: String::from("hidden"), field: 42 };
+// foo.skipped(); // Getter not generated
+```
 
-    fn set_skipped(&mut self, val: &str) -> &mut Self {
-        self.skipped = val.to_string();
-        self
-    }
+### For Unary Structs
 
-    fn with_skipped(mut self, val: &str) -> Self {
-        self.skipped = val.to_string();
-        self
-    }
-}
+For unary structs (tuple structs with a single field), `get`, `get_mut`, and `set` functions are generated.
+
+```rust
+# use getset::{CopyGetters, Getters, MutGetters, Setters};
+#
+#[derive(Setters, Getters, MutGetters)]
+struct UnaryTuple(#[getset(set, get, get_mut)] i32);
+
+let mut tuple = UnaryTuple(42);
+assert_eq!(tuple.get(), &42);
+assert_eq!(tuple.get_mut(), &mut 42);
+tuple.set(43);
+assert_eq!(tuple.get(), &43);
+
+#[derive(CopyGetters)]
+struct CopyUnaryTuple(#[getset(get_copy)] i32);
+
+let tuple = CopyUnaryTuple(42);
 ```
