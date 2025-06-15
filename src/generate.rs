@@ -1,7 +1,8 @@
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use proc_macro_error2::abort;
 use syn::{
-    self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
+    self, ext::IdentExt, spanned::Spanned, Expr, Field, GenericArgument, Lit, Meta, MetaNameValue,
+    PathArguments, Type, Visibility,
 };
 
 use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};
@@ -78,21 +79,71 @@ fn parse_vis_str(s: &str, span: proc_macro2::Span) -> Visibility {
     }
 }
 
-// Helper function to parse visibility attribute
-pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
-    let meta = attr?;
-    let Meta::NameValue(MetaNameValue { value, path, .. }) = meta else {
-        return None;
+// Helper function to parse attributes
+pub struct FieldAttributes {
+    pub visibility: Option<Visibility>,
+    pub with_prefix: bool,
+    pub as_ref: bool,
+    pub as_mut: bool,
+    pub optional: bool,
+    pub into: bool,
+    pub is_const: bool,
+}
+
+impl Default for FieldAttributes {
+    fn default() -> Self {
+        FieldAttributes {
+            visibility: None,
+            with_prefix: false,
+            as_ref: false,
+            as_mut: false,
+            optional: false,
+            into: false,
+            is_const: false,
+        }
+    }
+}
+
+pub fn parse_attributes(attr: Option<&Meta>) -> FieldAttributes {
+    let mut attrs = FieldAttributes::default();
+
+    let meta = match attr {
+        Some(m) => m,
+        None => return attrs,
     };
 
-    if !path.is_ident(meta_name) {
-        return None;
+    let Meta::NameValue(nv) = meta else {
+        return attrs;
+    };
+
+    let s = match expr_to_string(&nv.value) {
+        Some(s) => s,
+        None => return attrs,
+    };
+
+    for word in s.split_whitespace() {
+        match word {
+            "with_prefix" => attrs.with_prefix = true,
+            "as_ref" => attrs.as_ref = true,
+            "as_mut" => attrs.as_mut = true,
+            "optional" => attrs.optional = true,
+            "into" => attrs.into = true,
+            "const" => attrs.is_const = true,
+            _ => {
+                // Parse visibility specifiers
+                let vis = parse_vis_str(word, nv.value.span());
+                if attrs.visibility.is_some() {
+                    abort!(
+                        nv.value.span(),
+                        "Only one visibility specifier is allowed per attribute"
+                    );
+                }
+                attrs.visibility = Some(vis);
+            }
+        }
     }
 
-    let value_str = expr_to_string(value)?;
-    let vis_str = value_str.split(' ').find(|v| *v != "with_prefix")?;
-
-    Some(parse_vis_str(vis_str, value.span()))
+    attrs
 }
 
 /// Some users want legacy/compatibility.
@@ -124,6 +175,40 @@ fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
     let global_attr_has_prefix = params.global_attr.as_ref().is_some_and(meta_has_prefix);
 
     field_attr_has_prefix || global_attr_has_prefix
+}
+
+// Helper to extract inner type from Option<T>
+fn extract_option_inner(ty: &Type) -> Option<Type> {
+    if let Type::Path(type_path) = ty {
+        if let Some(segment) = type_path.path.segments.last() {
+            if segment.ident == "Option" {
+                if let PathArguments::AngleBracketed(args) = &segment.arguments {
+                    if let Some(GenericArgument::Type(inner)) = args.args.first() {
+                        return Some(inner.clone());
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+// Helper to generate as_ref/as_mut return type
+fn as_ref_type(ty: &Type) -> TokenStream2 {
+    if let Some(inner) = extract_option_inner(ty) {
+        quote! { Option<&#inner> }
+    } else {
+        quote! { &#ty }
+    }
+}
+
+// Helper to generate as_mut return type
+fn as_mut_type(ty: &Type) -> TokenStream2 {
+    if let Some(inner) = extract_option_inner(ty) {
+        quote! { Option<&mut #inner> }
+    } else {
+        quote! { &mut #ty }
+    }
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
@@ -165,64 +250,168 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .next_back()
         .or_else(|| params.global_attr.clone());
 
-    let visibility = parse_visibility(attr.as_ref(), params.mode.name());
+    let attrs = parse_attributes(attr.as_ref());
+    let visibility = attrs.visibility.unwrap_or_else(|| {
+        parse_vis_str("pub(self)", Span::call_site()) // Default to pub(self) which means not using pub at all
+    });
+    let const_qual = if attrs.is_const {
+        quote! { const }
+    } else {
+        quote! {}
+    };
+
     match attr {
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
-            Get => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> &#ty {
-                        &self.#field_name
+            Get | GetClone | GetCopy => {
+                // Validate attribute compatibility for getters
+                if attrs.as_mut {
+                    abort!(
+                        field.span(),
+                        "`as_mut` attribute is only allowed for MutGetters"
+                    );
+                }
+                if attrs.optional {
+                    abort!(
+                        field.span(),
+                        "`optional` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+                if attrs.into {
+                    abort!(
+                        field.span(),
+                        "`into` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+
+                if attrs.as_ref {
+                    let return_ty = as_ref_type(&ty);
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&self) -> #return_ty {
+                            self.#field_name.as_ref()
+                        }
+                    }
+                } else {
+                    match params.mode {
+                        Get => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> &#ty {
+                                &self.#field_name
+                            }
+                        },
+                        GetClone => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> #ty {
+                                self.#field_name.clone()
+                            }
+                        },
+                        GetCopy => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> #ty {
+                                self.#field_name
+                            }
+                        },
+                        _ => unreachable!(),
                     }
                 }
             }
-            GetClone => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
-                        self.#field_name.clone()
-                    }
+            Set | SetWith => {
+                // Validate attribute compatibility for setters
+                if attrs.as_ref {
+                    abort!(
+                        field.span(),
+                        "`as_ref` attribute is only allowed for Getters"
+                    );
                 }
-            }
-            GetCopy => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
-                        self.#field_name
-                    }
+                if attrs.as_mut {
+                    abort!(
+                        field.span(),
+                        "`as_mut` attribute is only allowed for MutGetters"
+                    );
                 }
-            }
-            Set => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                        self.#field_name = val;
-                        self
+
+                let (arg_ty, set_expr) = if attrs.optional {
+                    if let Some(inner_ty) = extract_option_inner(&ty) {
+                        if attrs.into {
+                            (quote! { impl Into<#inner_ty> }, quote! { Some(val.into()) })
+                        } else {
+                            (quote! { #inner_ty }, quote! { Some(val) })
+                        }
+                    } else {
+                        abort!(
+                            ty.span(),
+                            "optional attribute requires Option<T> field type"
+                        )
                     }
+                } else if attrs.into {
+                    (quote! { impl Into<#ty> }, quote! { val.into() })
+                } else {
+                    (quote! { #ty }, quote! { val })
+                };
+
+                match params.mode {
+                    Set => quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self, val: #arg_ty) -> &mut Self {
+                            self.#field_name = #set_expr;
+                            self
+                        }
+                    },
+                    SetWith => quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(mut self, val: #arg_ty) -> Self {
+                            self.#field_name = #set_expr;
+                            self
+                        }
+                    },
+                    _ => unreachable!(),
                 }
             }
             GetMut => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self) -> &mut #ty {
-                        &mut self.#field_name
-                    }
+                // Validate attribute compatibility for mutable getters
+                if attrs.as_ref {
+                    abort!(
+                        field.span(),
+                        "`as_ref` attribute is only allowed for Getters"
+                    );
                 }
-            }
-            SetWith => {
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(mut self, val: #ty) -> Self {
-                        self.#field_name = val;
-                        self
+                if attrs.optional {
+                    abort!(
+                        field.span(),
+                        "`optional` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+                if attrs.into {
+                    abort!(
+                        field.span(),
+                        "`into` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+
+                if attrs.as_mut {
+                    let return_ty = as_mut_type(&ty);
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self) -> #return_ty {
+                            self.#field_name.as_mut()
+                        }
+                    }
+                } else {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self) -> &mut #ty {
+                            &mut self.#field_name
+                        }
                     }
                 }
             }
@@ -240,71 +429,176 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
         .next_back()
         .or_else(|| params.global_attr.clone());
     let ty = field.ty.clone();
-    let visibility = parse_visibility(attr.as_ref(), params.mode.name());
+    let attrs = parse_attributes(attr.as_ref());
+    let visibility = attrs.visibility.unwrap_or_else(|| {
+        parse_vis_str("pub(self)", Span::call_site()) // Default to pub(self) which means not using pub at all
+    });
+    let const_qual = if attrs.is_const {
+        quote! { const }
+    } else {
+        quote! {}
+    };
 
     match attr {
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
-            Get => {
+            Get | GetClone | GetCopy => {
+                // Validate attribute compatibility for getters
+                if attrs.as_mut {
+                    abort!(
+                        field.span(),
+                        "`as_mut` attribute is only allowed for MutGetters"
+                    );
+                }
+                if attrs.optional {
+                    abort!(
+                        field.span(),
+                        "`optional` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+                if attrs.into {
+                    abort!(
+                        field.span(),
+                        "`into` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+
                 let fn_name = Ident::new("get", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> &#ty {
-                        &self.0
+                if attrs.as_ref {
+                    let return_ty = as_ref_type(&ty);
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&self) -> #return_ty {
+                            self.0.as_ref()
+                        }
+                    }
+                } else {
+                    match params.mode {
+                        Get => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> &#ty {
+                                &self.0
+                            }
+                        },
+                        GetClone => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> #ty {
+                                self.0.clone()
+                            }
+                        },
+                        GetCopy => quote! {
+                            #(#doc)*
+                            #[inline(always)]
+                            #visibility #const_qual fn #fn_name(&self) -> #ty {
+                                self.0
+                            }
+                        },
+                        _ => unreachable!(),
                     }
                 }
             }
-            GetClone => {
-                let fn_name = Ident::new("get", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
-                        self.0.clone()
-                    }
+            Set | SetWith => {
+                // Validate attribute compatibility for setters
+                if attrs.as_ref {
+                    abort!(
+                        field.span(),
+                        "`as_ref` attribute is only allowed for Getters"
+                    );
                 }
-            }
-            GetCopy => {
-                let fn_name = Ident::new("get", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&self) -> #ty {
-                        self.0
-                    }
+                if attrs.as_mut {
+                    abort!(
+                        field.span(),
+                        "`as_mut` attribute is only allowed for MutGetters"
+                    );
                 }
-            }
-            Set => {
-                let fn_name = Ident::new("set", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self, val: #ty) -> &mut Self {
-                        self.0 = val;
-                        self
+
+                let (arg_ty, set_expr) = if attrs.optional {
+                    if let Some(inner_ty) = extract_option_inner(&ty) {
+                        if attrs.into {
+                            (quote! { impl Into<#inner_ty> }, quote! { Some(val.into()) })
+                        } else {
+                            (quote! { #inner_ty }, quote! { Some(val) })
+                        }
+                    } else {
+                        abort!(
+                            ty.span(),
+                            "optional attribute requires Option<T> field type"
+                        )
                     }
+                } else if attrs.into {
+                    (quote! { impl Into<#ty> }, quote! { val.into() })
+                } else {
+                    (quote! { #ty }, quote! { val })
+                };
+
+                let fn_name = match params.mode {
+                    Set => Ident::new("set", Span::call_site()),
+                    SetWith => Ident::new("set_with", Span::call_site()),
+                    _ => unreachable!(),
+                };
+
+                match params.mode {
+                    Set => quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self, val: #arg_ty) -> &mut Self {
+                            self.0 = #set_expr;
+                            self
+                        }
+                    },
+                    SetWith => quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(mut self, val: #arg_ty) -> Self {
+                            self.0 = #set_expr;
+                            self
+                        }
+                    },
+                    _ => unreachable!(),
                 }
             }
             GetMut => {
-                let fn_name = Ident::new("get_mut", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(&mut self) -> &mut #ty {
-                        &mut self.0
-                    }
+                // Validate attribute compatibility for mutable getters
+                if attrs.as_ref {
+                    abort!(
+                        field.span(),
+                        "`as_ref` attribute is only allowed for Getters"
+                    );
                 }
-            }
-            SetWith => {
-                let fn_name = Ident::new("set_with", Span::call_site());
-                quote! {
-                    #(#doc)*
-                    #[inline(always)]
-                    #visibility fn #fn_name(mut self, val: #ty) -> Self {
-                        self.0 = val;
-                        self
+                if attrs.optional {
+                    abort!(
+                        field.span(),
+                        "`optional` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+                if attrs.into {
+                    abort!(
+                        field.span(),
+                        "`into` attribute is only allowed for Setters and WithSetters"
+                    );
+                }
+
+                let fn_name = Ident::new("get_mut", Span::call_site());
+                if attrs.as_mut {
+                    let return_ty = as_mut_type(&ty);
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self) -> #return_ty {
+                            self.0.as_mut()
+                        }
+                    }
+                } else {
+                    quote! {
+                        #(#doc)*
+                        #[inline(always)]
+                        #visibility #const_qual fn #fn_name(&mut self) -> &mut #ty {
+                            &mut self.0
+                        }
                     }
                 }
             }
