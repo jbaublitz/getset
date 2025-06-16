@@ -258,6 +258,39 @@ struct CopyUnaryTuple(#[getset(get_copy)] i32);
 
 let tup = CopyUnaryTuple(42);
 ```
+
+By default, a field of type `Option<T>` or `Result<T, E>` generates a getter
+returning `&Option<T>` or `&Result<T, E>`. To get an `Option<&T>` or
+`Result<&T, &E>` instead, opt in with the `as_ref` / `as_mut` flags:
+
+```rust
+use getset::{Getters, MutGetters};
+
+#[derive(Getters, MutGetters)]
+struct MyStruct<T, E> {
+    /// Returns `Option<&T>` instead of `&Option<T>`
+    #[getset(get = "as_ref", get_mut = "as_mut")]
+    maybe: Option<T>,
+
+    /// Returns `Result<&T, &E>` instead of `&Result<T, E>`
+    #[getset(get = "as_ref", get_mut = "as_mut")]
+    parsed: Result<T, E>,
+}
+
+let mut s = MyStruct {
+    maybe: Some(42),
+    parsed: Err("oops"),
+};
+
+assert_eq!(s.maybe(), Some(&42));
+assert_eq!(s.maybe_mut(), Some(&mut 42));
+
+assert_eq!(s.parsed(), Err(&"oops"));
+assert_eq!(s.parsed_mut(), Err(&mut "oops"));
+```
+
+* `get = "as_ref"` makes the generated getter call `.as_ref()`.
+* `get_mut = "as_mut"` makes the generated mutable getter call `.as_mut()`.
 */
 
 #[macro_use]
