@@ -1,7 +1,8 @@
 use proc_macro_error2::abort;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use syn::{
-    self, Expr, Field, Lit, Meta, MetaNameValue, Visibility, ext::IdentExt, spanned::Spanned,
+    self, Expr, Field, GenericArgument, Lit, Meta, MetaNameValue, PathArguments, PathSegment, Type,
+    TypePath, Visibility, ext::IdentExt, spanned::Spanned,
 };
 
 use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};
@@ -70,6 +71,21 @@ fn expr_to_string(expr: &Expr) -> Option<String> {
     }
 }
 
+// Helper function to collect named value (named is `meta_name`) from attribute
+fn parse_named_value(attr: Option<&Meta>, meta_name: &str) -> Option<String> {
+    let meta = attr?;
+    let Meta::NameValue(MetaNameValue { path, value, .. }) = meta else {
+        return None;
+    };
+
+    if !path.is_ident(meta_name) {
+        return None;
+    }
+
+    let value_str = expr_to_string(value)?;
+    Some(value_str)
+}
+
 // Helper function to parse visibility
 fn parse_vis_str(s: &str, span: proc_macro2::Span) -> Visibility {
     match syn::parse_str(s) {
@@ -80,19 +96,117 @@ fn parse_vis_str(s: &str, span: proc_macro2::Span) -> Visibility {
 
 // Helper function to parse visibility attribute
 pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibility> {
-    let meta = attr?;
-    let Meta::NameValue(MetaNameValue { value, path, .. }) = meta else {
-        return None;
-    };
+    let value_str = parse_named_value(attr, meta_name)?;
+    let vis_str = value_str.split(' ').find(|v| v.starts_with("pub"))?;
 
-    if !path.is_ident(meta_name) {
-        return None;
+    Some(parse_vis_str(vis_str, attr.span()))
+}
+
+fn get_option_inner(seg: &PathSegment, span: proc_macro2::Span) -> &Type {
+    if let PathArguments::AngleBracketed(args) = &seg.arguments {
+        if let Some(inner_type) = args.args.first() {
+            if let GenericArgument::Type(inner_type) = inner_type {
+                return inner_type;
+            }
+        }
     }
+    abort!(
+        span,
+        "as_ref attribute is only supported on `Option` or `Result`"
+    )
+}
 
-    let value_str = expr_to_string(value)?;
-    let vis_str = value_str.split(' ').find(|v| *v != "with_prefix")?;
+fn get_result_inner(seg: &PathSegment, span: proc_macro2::Span) -> (&Type, &Type) {
+    if let PathArguments::AngleBracketed(args) = &seg.arguments {
+        let mut args_iter = args.args.iter();
+        if let Some(ok_ty) = args_iter.next() {
+            if let GenericArgument::Type(ok_ty) = ok_ty {
+                if let Some(err_ty) = args_iter.next() {
+                    if let GenericArgument::Type(err_ty) = err_ty {
+                        return (ok_ty, err_ty);
+                    }
+                }
+            }
+        }
+    }
+    abort!(
+        span,
+        "as_ref attribute is only supported on `Option` or `Result`"
+    )
+}
 
-    Some(parse_vis_str(vis_str, value.span()))
+// Helper function to parse as_ref attribute
+pub fn parse_as_ref(attr: Option<&Meta>, meta_name: &str) -> bool {
+    let Some(value_str) = parse_named_value(attr, meta_name) else {
+        return false;
+    };
+    value_str.split(' ').any(|v| v == "as_ref")
+}
+
+fn get_as_ref_return(ty: &Type, span: proc_macro2::Span) -> TokenStream2 {
+    match ty {
+        Type::Path(TypePath { path, .. }) => {
+            let Some(last) = path.segments.last() else {
+                abort!(
+                    span,
+                    "as_ref attribute is only supported on `Option` or `Result`"
+                );
+            };
+
+            if last.ident == "Option" {
+                let inner_ty = get_option_inner(last, span);
+                return quote! {Option<&#inner_ty>};
+            }
+
+            if last.ident == "Result" {
+                let (ok_ty, err_ty) = get_result_inner(last, span);
+                return quote! {Result<&#ok_ty, &#err_ty>};
+            }
+
+            abort!(
+                span,
+                "as_ref attribute is only supported on `Option` or `Result`"
+            )
+        }
+        _ => abort!(
+            span,
+            "as_ref attribute is only supported on `Option` or `Result`"
+        ),
+    }
+}
+
+pub fn parse_as_mut(attr: Option<&Meta>, meta_name: &str) -> bool {
+    let Some(value_str) = parse_named_value(attr, meta_name) else {
+        return false;
+    };
+    value_str.split(' ').any(|v| v == "as_mut")
+}
+
+fn get_as_mut_return(ty: &Type, span: proc_macro2::Span) -> TokenStream2 {
+    match ty {
+        Type::Path(TypePath { path, .. }) => {
+            if let Some(last) = path.segments.last() {
+                if last.ident == "Option" {
+                    let inner_ty = get_option_inner(last, span);
+                    return quote! {Option<&mut #inner_ty>};
+                }
+
+                if last.ident == "Result" {
+                    let (ok_ty, err_ty) = get_result_inner(last, span);
+                    return quote! {Result<&mut #ok_ty, &mut #err_ty>};
+                }
+            }
+
+            abort!(
+                span,
+                "as_mut attribute is only supported on `Option` or `Result`"
+            )
+        }
+        _ => abort!(
+            span,
+            "as_mut attribute is only supported on `Option` or `Results`"
+        ),
+    }
 }
 
 /// Some users want legacy/compatibility.
@@ -171,11 +285,19 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
             Get => {
+                let (return_code, return_ty) = if parse_as_ref(attr.as_ref(), params.mode.name()) {
+                    (
+                        quote! {self.#field_name.as_ref()},
+                        get_as_ref_return(&ty, field.span()),
+                    )
+                } else {
+                    (quote! {&self.#field_name}, quote! {&#ty})
+                };
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&self) -> &#ty {
-                        &self.#field_name
+                    #visibility fn #fn_name(&self) -> #return_ty {
+                        #return_code
                     }
                 }
             }
@@ -208,11 +330,19 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 }
             }
             GetMut => {
+                let (return_code, return_ty) = if parse_as_mut(attr.as_ref(), params.mode.name()) {
+                    (
+                        quote! {self.#field_name.as_mut()},
+                        get_as_mut_return(&ty, field.span()),
+                    )
+                } else {
+                    (quote! {&mut self.#field_name}, quote! {&mut #ty})
+                };
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&mut self) -> &mut #ty {
-                        &mut self.#field_name
+                    #visibility fn #fn_name(&mut self) -> #return_ty {
+                        #return_code
                     }
                 }
             }
@@ -248,11 +378,19 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
         Some(_) => match params.mode {
             Get => {
                 let fn_name = Ident::new("get", Span::call_site());
+                let (return_code, return_ty) = if parse_as_ref(attr.as_ref(), params.mode.name()) {
+                    (
+                        quote! {self.0.as_ref()},
+                        get_as_ref_return(&ty, field.span()),
+                    )
+                } else {
+                    (quote! {&self.0}, quote! {&#ty})
+                };
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&self) -> &#ty {
-                        &self.0
+                    #visibility fn #fn_name(&self) -> #return_ty {
+                        #return_code
                     }
                 }
             }
@@ -289,11 +427,19 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
             }
             GetMut => {
                 let fn_name = Ident::new("get_mut", Span::call_site());
+                let (return_code, return_ty) = if parse_as_mut(attr.as_ref(), params.mode.name()) {
+                    (
+                        quote! {self.0.as_mut()},
+                        get_as_mut_return(&ty, field.span()),
+                    )
+                } else {
+                    (quote! {&mut self.0}, quote! {&mut #ty})
+                };
                 quote! {
                     #(#doc)*
                     #[inline(always)]
-                    #visibility fn #fn_name(&mut self) -> &mut #ty {
-                        &mut self.0
+                    #visibility fn #fn_name(&mut self) -> #return_ty {
+                        #return_code
                     }
                 }
             }
