@@ -264,9 +264,9 @@ let tup = CopyUnaryTuple(42);
 extern crate quote;
 
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
 use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
-use syn::{parse_macro_input, spanned::Spanned, DataStruct, DeriveInput, Meta};
+use proc_macro2::TokenStream as TokenStream2;
+use syn::{DataStruct, DeriveInput, Meta, parse_macro_input, spanned::Spanned};
 
 use crate::generate::{GenMode, GenParams};
 
@@ -349,7 +349,7 @@ fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
 }
 
 fn parse_attr(attr: &syn::Attribute, mode: GenMode) -> Option<syn::Meta> {
-    use syn::{punctuated::Punctuated, Token};
+    use syn::{Token, punctuated::Punctuated};
 
     if attr.path().is_ident("getset") {
         let meta_list =
