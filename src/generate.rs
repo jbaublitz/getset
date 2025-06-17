@@ -1,7 +1,7 @@
-use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use proc_macro_error2::abort;
+use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use syn::{
-    self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
+    self, Expr, Field, Lit, Meta, MetaNameValue, Visibility, ext::IdentExt, spanned::Spanned,
 };
 
 use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};

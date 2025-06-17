@@ -11,7 +11,7 @@ authors = [
     "John Baublitz <john.m.baublitz@gmail.com",
 ]
 license = "MIT"
-edition = "2018"
+edition = "2024"
 
 categories = ["development-tools::procedural-macro-helpers"]
 keywords = ["macro", "getter", "setter", "getters", "setters"]
