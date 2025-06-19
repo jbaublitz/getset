@@ -104,10 +104,8 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
 
 fn get_option_inner(seg: &PathSegment, span: proc_macro2::Span) -> &Type {
     if let PathArguments::AngleBracketed(args) = &seg.arguments {
-        if let Some(inner_type) = args.args.first() {
-            if let GenericArgument::Type(inner_type) = inner_type {
-                return inner_type;
-            }
+        if let Some(GenericArgument::Type(inner_type)) = args.args.first() {
+            return inner_type;
         }
     }
     abort!(
@@ -119,13 +117,9 @@ fn get_option_inner(seg: &PathSegment, span: proc_macro2::Span) -> &Type {
 fn get_result_inner(seg: &PathSegment, span: proc_macro2::Span) -> (&Type, &Type) {
     if let PathArguments::AngleBracketed(args) = &seg.arguments {
         let mut args_iter = args.args.iter();
-        if let Some(ok_ty) = args_iter.next() {
-            if let GenericArgument::Type(ok_ty) = ok_ty {
-                if let Some(err_ty) = args_iter.next() {
-                    if let GenericArgument::Type(err_ty) = err_ty {
-                        return (ok_ty, err_ty);
-                    }
-                }
+        if let Some(GenericArgument::Type(ok_ty)) = args_iter.next() {
+            if let Some(GenericArgument::Type(err_ty)) = args_iter.next() {
+                return (ok_ty, err_ty);
             }
         }
     }
