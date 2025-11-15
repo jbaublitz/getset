@@ -7,6 +7,26 @@ use syn::{
 use self::GenMode::{Get, GetClone, GetCopy, GetMut, Set, SetWith};
 use super::parse_attr;
 
+// Helper function to check if a meta contains a specific mode
+fn has_mode_in_meta(meta: &Meta, mode: GenMode) -> bool {
+    match meta {
+        Meta::Path(path) => path.is_ident(mode.name()),
+        Meta::List(meta_list) => {
+            // Parse the meta list and check if it contains the mode
+            if let Ok(nested_metas) = meta_list.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+            ) {
+                nested_metas
+                    .iter()
+                    .any(|nested| nested.path().is_ident(mode.name()))
+            } else {
+                false
+            }
+        }
+        Meta::NameValue(name_value) => name_value.path.is_ident(mode.name()),
+    }
+}
+
 pub struct GenParams {
     pub mode: GenMode,
     pub global_attr: Option<Meta>,
@@ -97,33 +117,67 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
 
 /// Some users want legacy/compatibility.
 /// (Getters are often prefixed with `get_`)
-fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
+fn get_prefix_attr(f: &Field, params: &GenParams) -> Option<String> {
     // helper function to check if meta has `with_prefix` attribute
-    let meta_has_prefix = |meta: &Meta| -> bool {
+    let get_prefix_from_meta = |meta: &Meta| -> Option<String> {
         if let Meta::NameValue(name_value) = meta {
-            if let Some(s) = expr_to_string(&name_value.value) {
-                return s.split(" ").any(|v| v == "with_prefix");
+            if meta.path().is_ident("prefix")
+                && let Some(s) = expr_to_string(&name_value.value)
+            {
+                return Some(s);
+            } else if let Some(s) = expr_to_string(&name_value.value)
+                && s.split(" ").any(|v| v == "with_prefix")
+            {
+                return Some("get_".to_string());
             }
         }
-        false
+        None
     };
 
-    let field_attr_has_prefix = f
+    let mut prefix = f
         .attrs
         .iter()
-        .filter_map(|attr| parse_attr(attr, params.mode))
-        .find(|meta| {
-            meta.path().is_ident("get")
-                || meta.path().is_ident("get_clone")
-                || meta.path().is_ident("get_copy")
-                || meta.path().is_ident("get_mut")
+        .filter(|attr| attr.path().is_ident("getset"))
+        .find_map(|attr| {
+            if let Ok(meta_list) = attr.parse_args_with(
+                syn::punctuated::Punctuated::<syn::Meta, syn::Token![,]>::parse_terminated,
+            ) {
+                meta_list.into_iter().find_map(|meta| {
+                    if meta.path().is_ident("prefix") {
+                        get_prefix_from_meta(&meta)
+                    } else {
+                        None
+                    }
+                })
+            } else {
+                None
+            }
         })
-        .as_ref()
-        .is_some_and(meta_has_prefix);
+        .or_else(|| {
+            if let Some(meta) = f
+                .attrs
+                .iter()
+                .filter_map(|attr| parse_attr(attr, params.mode))
+                .find(|meta| {
+                    meta.path().is_ident("get")
+                        || meta.path().is_ident("get_clone")
+                        || meta.path().is_ident("get_copy")
+                        || meta.path().is_ident("get_mut")
+                })
+            {
+                return get_prefix_from_meta(&meta);
+            }
+            None
+        });
 
-    let global_attr_has_prefix = params.global_attr.as_ref().is_some_and(meta_has_prefix);
+    // Prefix can be set globally
+    if prefix.is_none()
+        && let Some(meta) = params.global_attr.as_ref()
+    {
+        prefix = get_prefix_from_meta(meta);
+    }
 
-    field_attr_has_prefix || global_attr_has_prefix
+    prefix
 }
 
 pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
@@ -131,8 +185,8 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .ident
         .clone()
         .unwrap_or_else(|| abort!(field.span(), "Expected the field to have a name"));
-
-    let fn_name = if !has_prefix_attr(field, params)
+    let prefix = get_prefix_attr(field, params);
+    let fn_name = if prefix.is_none()
         && (params.mode.is_get())
         && params.mode.suffix().is_empty()
         && field_name.to_string().starts_with("r#")
@@ -142,11 +196,7 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         Ident::new(
             &format!(
                 "{}{}{}{}",
-                if has_prefix_attr(field, params) && (params.mode.is_get()) {
-                    "get_"
-                } else {
-                    ""
-                },
+                prefix.unwrap_or("".to_string()),
                 params.mode.prefix(),
                 field_name.unraw(),
                 params.mode.suffix()
@@ -163,7 +213,16 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .iter()
         .filter_map(|v| parse_attr(v, params.mode))
         .next_back()
-        .or_else(|| params.global_attr.clone());
+        .or_else(|| {
+            // Only inherit global attribute if it contains the current mode
+            params.global_attr.as_ref().and_then(|global_attr| {
+                if has_mode_in_meta(global_attr, params.mode) {
+                    Some(global_attr.clone())
+                } else {
+                    None
+                }
+            })
+        });
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
