@@ -1,5 +1,4 @@
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
-use proc_macro_error2::abort;
 use syn::{
     self, ext::IdentExt, spanned::Spanned, Expr, Field, Lit, Meta, MetaNameValue, Visibility,
 };
