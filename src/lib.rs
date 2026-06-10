@@ -263,18 +263,43 @@ let tup = CopyUnaryTuple(42);
 #[macro_use]
 extern crate quote;
 
+use std::{cell::RefCell, panic::UnwindSafe};
+
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
-use proc_macro_error2::{abort, abort_call_site, proc_macro_error};
 use syn::{parse_macro_input, spanned::Spanned, DataStruct, DeriveInput, Meta};
 
 use crate::generate::{GenMode, GenParams};
 
+#[macro_use]
+mod macros;
 mod generate;
 
+// Temporary workaround for deprecation of proc-macro-error2. This will be fixed once
+// Diagnostic is stabilized upstream.
+thread_local! {
+    static ERROR_REPORTING: RefCell<Option<TokenStream2>> = const { RefCell::new(None) };
+}
+
+fn wrap_panic<F>(input: TokenStream, f: F) -> TokenStream
+where
+    F: UnwindSafe + Fn(TokenStream) -> TokenStream,
+{
+    match std::panic::catch_unwind(move || f(input)) {
+        Ok(ts) => ts,
+        Err(_) => ERROR_REPORTING.with(|o| match o.borrow_mut().take() {
+            Some(ts) => ts.clone().into(),
+            None => quote!(compile_error!("No info set for panic")).into(),
+        }),
+    }
+}
+
 #[proc_macro_derive(Getters, attributes(get, with_prefix, getset))]
-#[proc_macro_error]
 pub fn getters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, getters_impl)
+}
+
+fn getters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::Get,
@@ -285,8 +310,11 @@ pub fn getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(CloneGetters, attributes(get_clone, with_prefix, getset))]
-#[proc_macro_error]
 pub fn clone_getters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, clone_getters_impl)
+}
+
+fn clone_getters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::GetClone,
@@ -297,8 +325,11 @@ pub fn clone_getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(CopyGetters, attributes(get_copy, with_prefix, getset))]
-#[proc_macro_error]
 pub fn copy_getters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, copy_getters_impl)
+}
+
+fn copy_getters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::GetCopy,
@@ -309,8 +340,11 @@ pub fn copy_getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(MutGetters, attributes(get_mut, getset))]
-#[proc_macro_error]
 pub fn mut_getters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, mut_getters_impl)
+}
+
+fn mut_getters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::GetMut,
@@ -321,8 +355,11 @@ pub fn mut_getters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(Setters, attributes(set, getset))]
-#[proc_macro_error]
 pub fn setters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, setters_impl)
+}
+
+fn setters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::Set,
@@ -333,8 +370,11 @@ pub fn setters(input: TokenStream) -> TokenStream {
 }
 
 #[proc_macro_derive(WithSetters, attributes(set_with, getset))]
-#[proc_macro_error]
 pub fn with_setters(input: TokenStream) -> TokenStream {
+    wrap_panic(input, with_setters_impl)
+}
+
+fn with_setters_impl(input: TokenStream) -> TokenStream {
     let ast = parse_macro_input!(input as DeriveInput);
     let params = GenParams {
         mode: GenMode::SetWith,
