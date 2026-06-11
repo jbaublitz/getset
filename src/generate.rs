@@ -1,4 +1,3 @@
-use proc_macro_error2::abort;
 use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
 use syn::{
     self, Expr, Field, Lit, Meta, MetaNameValue, Visibility, ext::IdentExt, spanned::Spanned,
@@ -100,10 +99,10 @@ pub fn parse_visibility(attr: Option<&Meta>, meta_name: &str) -> Option<Visibili
 fn has_prefix_attr(f: &Field, params: &GenParams) -> bool {
     // helper function to check if meta has `with_prefix` attribute
     let meta_has_prefix = |meta: &Meta| -> bool {
-        if let Meta::NameValue(name_value) = meta {
-            if let Some(s) = expr_to_string(&name_value.value) {
-                return s.split(" ").any(|v| v == "with_prefix");
-            }
+        if let Meta::NameValue(name_value) = meta
+            && let Some(s) = expr_to_string(&name_value.value)
+        {
+            return s.split(" ").any(|v| v == "with_prefix");
         }
         false
     };
