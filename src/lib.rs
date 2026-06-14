@@ -464,19 +464,30 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
             // This unwrap is safe because we know there is exactly one field
             let field = fields.iter().next().unwrap();
             let generated = generate::implement_for_unnamed(field, params);
-
-            quote! {
-                impl #impl_generics #name #ty_generics #where_clause {
-                    #generated
+            if !generated.is_empty() {
+                quote! {
+                    impl #impl_generics #name #ty_generics #where_clause {
+                        #generated
+                    }
                 }
+            } else {
+                quote! {}
             }
         } else {
-            let generated = fields.iter().map(|f| generate::implement(f, params));
+            let generated = fields
+                .iter()
+                .map(|f| generate::implement(f, params))
+                .filter(|g| !g.is_empty())
+                .collect::<Vec<_>>();
 
-            quote! {
-                impl #impl_generics #name #ty_generics #where_clause {
-                    #(#generated)*
+            if !generated.is_empty() {
+                quote! {
+                    impl #impl_generics #name #ty_generics #where_clause {
+                        #(#generated)*
+                    }
                 }
+            } else {
+                quote! {}
             }
         }
     } else {
