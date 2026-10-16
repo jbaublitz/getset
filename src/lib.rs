@@ -266,7 +266,7 @@ extern crate quote;
 use std::{cell::RefCell, panic::UnwindSafe};
 
 use proc_macro::TokenStream;
-use proc_macro2::TokenStream as TokenStream2;
+use proc_macro2::{Span, TokenStream as TokenStream2};
 use syn::{DataStruct, DeriveInput, Meta, parse_macro_input, spanned::Spanned};
 
 use crate::generate::{GenMode, GenParams};
@@ -459,7 +459,7 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
         // Handle unary struct
         if matches!(fields, syn::Fields::Unnamed(_)) {
             if fields.len() != 1 {
-                abort_call_site!("Only support unary struct!");
+                abort!(call_site_at(fields.span()), "Only support unary struct!");
             }
             // This unwrap is safe because we know there is exactly one field
             let field = fields.iter().next().unwrap();
@@ -481,6 +481,13 @@ fn produce(ast: &DeriveInput, params: &GenParams) -> TokenStream2 {
         }
     } else {
         // Nope. This is an Enum. We cannot handle these!
-        abort_call_site!("#[derive(Getters)] is only defined for structs, not for enums!");
+        abort!(
+            call_site_at(name.span()),
+            "#[derive(Getters)] is only defined for structs, not for enums!",
+        );
     }
+}
+
+fn call_site_at(span: Span) -> Span {
+    Span::call_site().located_at(span)
 }
