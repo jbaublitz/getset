@@ -19,11 +19,11 @@ macro_rules! abort_call_site {
 }
 
 macro_rules! abort {
-    ($span:expr, $fmt:tt) => {{
+    ($span:expr, $fmt:tt $(,)?) => {{
         let span = $span;
         let msg = $fmt.to_string();
         let _ = crate::ERROR_REPORTING.with(|o| {
-            *o.borrow_mut() = Some(quote_spanned! { span => compile_error!(#msg) });
+            *o.borrow_mut() = Some(quote_spanned! { span => compile_error!(#msg); });
         });
         std::panic::panic_any(())
     }};
@@ -31,7 +31,7 @@ macro_rules! abort {
         let span = $span;
         let msg = format!($fmt, $($fmt_args),+);
         let _ = crate::ERROR_REPORTING.with(|o| {
-            *o.borrow_mut() = Some(quote_spanned! { span => compile_error!(#msg) });
+            *o.borrow_mut() = Some(quote_spanned! { span => compile_error!(#msg); });
         });
         std::panic::panic_any(())
     }};
