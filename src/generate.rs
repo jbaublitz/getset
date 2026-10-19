@@ -1,4 +1,4 @@
-use proc_macro2::{Ident, Span, TokenStream as TokenStream2};
+use proc_macro2::{Ident, TokenStream as TokenStream2};
 use syn::{
     self, Expr, Field, Lit, Meta, MetaNameValue, Visibility, ext::IdentExt, spanned::Spanned,
 };
@@ -131,12 +131,25 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
         .clone()
         .unwrap_or_else(|| abort!(field.span(), "Expected the field to have a name"));
 
+    let local_attr = field
+        .attrs
+        .iter()
+        .filter_map(|v| parse_attr(v, params.mode))
+        .next_back();
+    let span = local_attr
+        .as_ref()
+        .map(|attr| attr.path().span())
+        .unwrap_or_else(|| field_name.span());
+    let attr = local_attr.or_else(|| params.global_attr.clone());
+
     let fn_name = if !has_prefix_attr(field, params)
-        && (params.mode.is_get())
+        && params.mode.is_get()
         && params.mode.suffix().is_empty()
         && field_name.to_string().starts_with("r#")
     {
-        field_name.clone()
+        let mut name = field_name.clone();
+        name.set_span(span);
+        name
     } else {
         Ident::new(
             &format!(
@@ -150,19 +163,12 @@ pub fn implement(field: &Field, params: &GenParams) -> TokenStream2 {
                 field_name.unraw(),
                 params.mode.suffix()
             ),
-            Span::call_site(),
+            span,
         )
     };
     let ty = field.ty.clone();
 
     let doc = field.attrs.iter().filter(|v| v.meta.path().is_ident("doc"));
-
-    let attr = field
-        .attrs
-        .iter()
-        .filter_map(|v| parse_attr(v, params.mode))
-        .next_back()
-        .or_else(|| params.global_attr.clone());
 
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
     match attr {
@@ -240,13 +246,14 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
         .or_else(|| params.global_attr.clone());
     let ty = field.ty.clone();
     let visibility = parse_visibility(attr.as_ref(), params.mode.name());
+    let span = attr.as_ref().map(|attr| attr.path()).span();
 
     match attr {
         // Generate nothing for skipped field
         Some(meta) if meta.path().is_ident("skip") => quote! {},
         Some(_) => match params.mode {
             Get => {
-                let fn_name = Ident::new("get", Span::call_site());
+                let fn_name = Ident::new("get", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -256,7 +263,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                 }
             }
             GetClone => {
-                let fn_name = Ident::new("get", Span::call_site());
+                let fn_name = Ident::new("get", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -266,7 +273,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                 }
             }
             GetCopy => {
-                let fn_name = Ident::new("get", Span::call_site());
+                let fn_name = Ident::new("get", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -276,7 +283,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                 }
             }
             Set => {
-                let fn_name = Ident::new("set", Span::call_site());
+                let fn_name = Ident::new("set", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -287,7 +294,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                 }
             }
             GetMut => {
-                let fn_name = Ident::new("get_mut", Span::call_site());
+                let fn_name = Ident::new("get_mut", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
@@ -297,7 +304,7 @@ pub fn implement_for_unnamed(field: &Field, params: &GenParams) -> TokenStream2 
                 }
             }
             SetWith => {
-                let fn_name = Ident::new("set_with", Span::call_site());
+                let fn_name = Ident::new("set_with", span);
                 quote! {
                     #(#doc)*
                     #[inline(always)]
