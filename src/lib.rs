@@ -384,6 +384,62 @@ fn with_setters_impl(input: TokenStream) -> TokenStream {
     produce(&ast, &params).into()
 }
 
+#[proc_macro_derive(
+    GetSet,
+    attributes(get, get_copy, get_clone, get_mut, set, set_with, with_prefix, getset)
+)]
+#[proc_macro_error]
+pub fn get_set(input: TokenStream) -> TokenStream {
+    let ast = parse_macro_input!(input as DeriveInput);
+
+    // Generate code for all modes
+    let mut output = TokenStream2::new();
+
+    // Getters
+    let get_params = GenParams {
+        mode: GenMode::Get,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::Get),
+    };
+    output.extend(produce(&ast, &get_params));
+
+    // CopyGetters
+    let get_params = GenParams {
+        mode: GenMode::GetCopy,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetCopy),
+    };
+    output.extend(produce(&ast, &get_params));
+
+    // CloneGetters
+    let get_params = GenParams {
+        mode: GenMode::GetClone,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetClone),
+    };
+    output.extend(produce(&ast, &get_params));
+
+    // MutGetters
+    let get_mut_params = GenParams {
+        mode: GenMode::GetMut,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::GetMut),
+    };
+    output.extend(produce(&ast, &get_mut_params));
+
+    // Setters
+    let set_params = GenParams {
+        mode: GenMode::Set,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::Set),
+    };
+    output.extend(produce(&ast, &set_params));
+
+    // WithSetters
+    let set_with_params = GenParams {
+        mode: GenMode::SetWith,
+        global_attr: parse_global_attr(&ast.attrs, GenMode::SetWith),
+    };
+    output.extend(produce(&ast, &set_with_params));
+
+    output.into()
+}
+
 fn parse_global_attr(attrs: &[syn::Attribute], mode: GenMode) -> Option<Meta> {
     attrs.iter().filter_map(|v| parse_attr(v, mode)).next_back()
 }
